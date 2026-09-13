@@ -1,0 +1,11 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 1
+    paths:
+        - app/Services/SafeResponse.php
+        - app/Http/Requests
+        - app/Services/ApiListing.php
+        - app/Http/Controllers/Api
+    tmpDir: storage/framework/phpstan

@@ -37,6 +37,7 @@ class FaceNetDatabase:
         try:
             self.connection = mysql.connector.connect(
                 host=self.host,
+                port=config.DB_PORT,
                 database=self.database,
                 user=self.user,
                 password=self.password

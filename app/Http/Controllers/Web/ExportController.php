@@ -4,9 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
-use App\Models\DailyReport;
 use App\Models\MonthlyReport;
-use App\Models\User;
 use App\Services\ExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,9 +16,9 @@ class ExportController extends Controller
     public function __construct(ExportService $exportService)
     {
         $this->exportService = $exportService;
-        
+
         // Load legacy core logic for global helpers if not already loaded
-        $corePath = resource_path('views/pages/core.php');
+        $corePath = app_path('Legacy/core.php');
         if (file_exists($corePath)) {
             require_once $corePath;
         }
@@ -32,7 +30,7 @@ class ExportController extends Controller
     public function exportMonthly(Request $request)
     {
         // Simple auth check for now as we transition
-        if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
+        if (! isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
             return abort(403, 'Forbidden');
         }
 
@@ -57,16 +55,16 @@ class ExportController extends Controller
         if ($term) {
             $query->whereHas('user', function ($q) use ($term) {
                 $q->where('nama', 'like', "%$term%")
-                  ->orWhere('nim', 'like', "%$term%");
+                    ->orWhere('nim', 'like', "%$term%");
             });
         }
 
         $reports = $query->join('users', 'users.id', '=', 'monthly_reports.user_id')
-                         ->orderBy('users.nama', 'asc')
-                         ->orderBy('monthly_reports.year', 'desc')
-                         ->orderBy('monthly_reports.month', 'desc')
-                         ->select('monthly_reports.*') // Avoid column collisions
-                         ->get();
+            ->orderBy('users.nama', 'asc')
+            ->orderBy('monthly_reports.year', 'desc')
+            ->orderBy('monthly_reports.month', 'desc')
+            ->select('monthly_reports.*') // Avoid column collisions
+            ->get();
 
         if ($reports->isEmpty()) {
             return redirect()->back()->with('error', 'Data laporan bulanan tidak ditemukan.');
@@ -77,26 +75,28 @@ class ExportController extends Controller
 
         foreach ($reports as $r) {
             $user = $r->user;
-            if (!$user) continue;
+            if (! $user) {
+                continue;
+            }
 
             $uName = $user->nama;
-            if (!isset($sheets[$uName])) {
+            if (! isset($sheets[$uName])) {
                 $sheets[$uName] = [
-                    'title' => 'LAPORAN BULANAN MAGANG - ' . strtoupper($uName),
+                    'title' => 'LAPORAN BULANAN MAGANG - '.strtoupper($uName),
                     'widths' => [50, 200, 400, 200],
-                    'rows' => []
+                    'rows' => [],
                 ];
                 // Employee Info
                 $sheets[$uName]['rows'][] = ['NAMA:', $uName, '_style' => 'sInfoLabel'];
                 $sheets[$uName]['rows'][] = ['NIM:', $user->nim, '_style' => 'sInfoLabel'];
                 $sheets[$uName]['rows'][] = ['STARTUP:', $user->startup, '_style' => 'sInfoLabel'];
-                $sheets[$uName]['rows'][] = []; 
+                $sheets[$uName]['rows'][] = [];
             }
-            
+
             $monthName = $months[$r->month] ?? $r->month;
-            
+
             // Month Header
-            $sheets[$uName]['rows'][] = ['PERIODE LAPORAN:', strtoupper($monthName) . ' ' . $r->year, '', '', '_style' => 'sSubHeader'];
+            $sheets[$uName]['rows'][] = ['PERIODE LAPORAN:', strtoupper($monthName).' '.$r->year, '', '', '_style' => 'sSubHeader'];
             $sheets[$uName]['rows'][] = ['Status:', strtoupper($r->status), '', '', '_style' => 'sInfoLabel'];
             $sheets[$uName]['rows'][] = [];
 
@@ -109,7 +109,7 @@ class ExportController extends Controller
             $sheets[$uName]['rows'][] = ['PENCAPAIAN DAN HASIL KERJA:', '', '', '', '_style' => 'sSubHeader'];
             $sheets[$uName]['rows'][] = ['No', 'Pencapaian', 'Detail', '', '_style' => 'sSubHeader'];
             $achievements = is_array($r->achievements) ? $r->achievements : json_decode($r->achievements, true);
-            if (is_array($achievements) && !empty($achievements)) {
+            if (is_array($achievements) && ! empty($achievements)) {
                 $no = 1;
                 foreach ($achievements as $ach) {
                     $sheets[$uName]['rows'][] = [$no++, $ach['achievement'] ?? '', $ach['detail'] ?? ''];
@@ -123,7 +123,7 @@ class ExportController extends Controller
             $sheets[$uName]['rows'][] = ['KENDALA:', '', '', '', '_style' => 'sSubHeader'];
             $sheets[$uName]['rows'][] = ['No', 'Kendala', 'Solusi', 'Catatan', '_style' => 'sSubHeader'];
             $obstacles = is_array($r->obstacles) ? $r->obstacles : json_decode($r->obstacles, true);
-            if (is_array($obstacles) && !empty($obstacles)) {
+            if (is_array($obstacles) && ! empty($obstacles)) {
                 $no = 1;
                 foreach ($obstacles as $obs) {
                     $sheets[$uName]['rows'][] = [$no++, $obs['obstacle'] ?? '', $obs['solution'] ?? '', $obs['note'] ?? ''];
@@ -131,13 +131,13 @@ class ExportController extends Controller
             } else {
                 $sheets[$uName]['rows'][] = ['-', 'Tidak ada data kendala', '-', '-'];
             }
-            
+
             $sheets[$uName]['rows'][] = [];
-            $sheets[$uName]['rows'][] = ['================================================================================', '', '', '']; 
-            $sheets[$uName]['rows'][] = []; 
+            $sheets[$uName]['rows'][] = ['================================================================================', '', '', ''];
+            $sheets[$uName]['rows'][] = [];
         }
 
-        return $this->exportService->exportToExcelXML('export_bulanan_' . date('Y-m-d'), $sheets);
+        return $this->exportService->exportToExcelXML('export_bulanan_'.date('Y-m-d'), $sheets);
     }
 
     /**
@@ -145,28 +145,30 @@ class ExportController extends Controller
      */
     public function exportKpi(Request $request)
     {
-        if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
+        if (! isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
             return abort(403, 'Forbidden');
         }
 
         // We still need the legacy PDO for getAllKPIData for now
         // core.php provides getPdo()
         $pdo = getPdo();
-        
+
         $filterType = $request->query('filter_type', 'period');
         $periodStart = null;
         $periodEnd = null;
-        
+
         if ($filterType === 'monthly') {
-            $year = (int)$request->query('year', date('Y'));
-            $month = (int)$request->query('month', date('n'));
+            $year = (int) $request->query('year', date('Y'));
+            $month = (int) $request->query('month', date('n'));
             $periodStart = sprintf('%04d-%02d-01', $year, $month);
             $periodEnd = date('Y-m-t', strtotime($periodStart));
         }
-        
+
         $data = getAllKPIData($pdo, $periodStart, $periodEnd);
-        if (!$data) return redirect()->back()->with('error', 'No data found');
-        
+        if (! $data) {
+            return redirect()->back()->with('error', 'No data found');
+        }
+
         $rows = [];
         $no = 1;
         foreach ($data['kpi_data'] as $row) {
@@ -184,20 +186,20 @@ class ExportController extends Controller
                 $row['overtime_count'],
                 $row['missing_daily_reports_count'] ?? 0,
                 $row['kpi_score'],
-                $row['status']
+                $row['status'],
             ];
         }
 
         $sheets = [
             'KPI Summary' => [
-                'title' => 'Penilaian KPI Absen - ' . ($filterType === 'monthly' ? "Bulan $month Tahun $year" : "Seluruh Periode"),
+                'title' => 'Penilaian KPI Absen - '.($filterType === 'monthly' ? "Bulan $month Tahun $year" : 'Seluruh Periode'),
                 'widths' => [40, 150, 80, 80, 60, 50, 70, 90, 70, 50, 60, 90, 60, 80],
                 'header' => ['No', 'Nama', 'Hari Kerja (T)', 'Hari Kerja (A)', 'Ontime', 'WFA', 'Terlambat', 'Menit Terlambat', 'Izin/Sakit', 'Alpha', 'Overtime', 'Laporan Kosong', 'Score', 'Status'],
-                'rows' => $rows
-            ]
+                'rows' => $rows,
+            ],
         ];
 
-        return $this->exportService->exportToExcelXML('export_kpi_' . date('Y-m-d'), $sheets);
+        return $this->exportService->exportToExcelXML('export_kpi_'.date('Y-m-d'), $sheets);
     }
 
     /**
@@ -205,22 +207,22 @@ class ExportController extends Controller
      */
     public function exportKpiGroup(Request $request)
     {
-        if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
+        if (! isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
             return abort(403, 'Forbidden');
         }
 
-        $groupId = (int)$request->query('group_id');
-        if (!$groupId) {
+        $groupId = (int) $request->query('group_id');
+        if (! $groupId) {
             return redirect()->back()->with('error', 'group_id wajib');
         }
 
         $pdo = getPdo();
 
         // Ambil info kelompok
-        $grpStmt = $pdo->prepare("SELECT * FROM intern_groups WHERE id=:id LIMIT 1");
+        $grpStmt = $pdo->prepare('SELECT * FROM intern_groups WHERE id=:id LIMIT 1');
         $grpStmt->execute([':id' => $groupId]);
         $group = $grpStmt->fetch();
-        if (!$group) {
+        if (! $group) {
             return redirect()->back()->with('error', 'Kelompok tidak ditemukan');
         }
 
@@ -229,7 +231,7 @@ class ExportController extends Controller
         $periodEnd = $group['tanggal_selesai'];
 
         $data = getAllKPIData($pdo, $periodStart, $periodEnd, false, $groupId);
-        if (!$data || empty($data['kpi_data'])) {
+        if (! $data || empty($data['kpi_data'])) {
             return redirect()->back()->with('error', 'Tidak ada data KPI untuk kelompok ini');
         }
 
@@ -250,20 +252,21 @@ class ExportController extends Controller
                 $row['overtime_count'],
                 $row['missing_daily_reports_count'] ?? 0,
                 $row['kpi_score'],
-                $row['status']
+                $row['status'],
             ];
         }
 
         $sheets = [
-            'KPI ' . $group['nama'] => [
-                'title' => 'Penilaian KPI - ' . $group['nama'] . ' (' . $periodStart . ' s/d ' . $periodEnd . ')',
+            'KPI '.$group['nama'] => [
+                'title' => 'Penilaian KPI - '.$group['nama'].' ('.$periodStart.' s/d '.$periodEnd.')',
                 'widths' => [40, 150, 80, 80, 60, 50, 70, 90, 70, 50, 60, 90, 60, 80],
                 'header' => ['No', 'Nama', 'Hari Kerja (T)', 'Hari Kerja (A)', 'Ontime', 'WFA', 'Terlambat', 'Menit Terlambat', 'Izin/Sakit', 'Alpha', 'Overtime', 'Laporan Kosong', 'Score', 'Status'],
-                'rows' => $rows
-            ]
+                'rows' => $rows,
+            ],
         ];
 
-        $filename = 'export_kpi_' . preg_replace('/[^a-zA-Z0-9]/', '_', $group['nama']) . '_' . date('Y-m-d');
+        $filename = 'export_kpi_'.preg_replace('/[^a-zA-Z0-9]/', '_', $group['nama']).'_'.date('Y-m-d');
+
         return $this->exportService->exportToExcelXML($filename, $sheets);
     }
 
@@ -272,16 +275,16 @@ class ExportController extends Controller
      */
     public function exportDaily(Request $request)
     {
-        if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
+        if (! isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
             return abort(403, 'Forbidden');
         }
 
         $filterType = $request->query('filter_type', 'period');
         $format = $request->query('format', $request->query('export_format', 'combined'));
-        $year = (int)$request->query('year', date('Y'));
-        
+        $year = (int) $request->query('year', date('Y'));
+
         $monthsArr = [];
-        if ($request->has('months') && !empty($request->query('months'))) {
+        if ($request->has('months') && ! empty($request->query('months'))) {
             $monthsArr = array_map('intval', explode(',', $request->query('months')));
         } elseif ($request->has('export_months') && is_array($request->query('export_months'))) {
             $monthsArr = array_map('intval', $request->query('export_months'));
@@ -289,9 +292,9 @@ class ExportController extends Controller
 
         $query = DB::table('users as u')
             ->leftJoin('attendance as a', 'u.id', '=', 'a.user_id')
-            ->leftJoin('daily_reports as dr', function($join) {
+            ->leftJoin('daily_reports as dr', function ($join) {
                 $join->on('u.id', '=', 'dr.user_id')
-                     ->on(DB::raw('DATE(a.jam_masuk_iso)'), '=', 'dr.report_date');
+                    ->on(DB::raw('DATE(a.jam_masuk_iso)'), '=', 'dr.report_date');
             })
             ->where('u.role', 'pegawai')
             ->select(
@@ -302,14 +305,14 @@ class ExportController extends Controller
                 'dr.content as laporan'
             );
 
-        if ($filterType === 'monthly' && !empty($monthsArr)) {
+        if ($filterType === 'monthly' && ! empty($monthsArr)) {
             $query->whereIn(DB::raw('MONTH(a.jam_masuk_iso)'), $monthsArr)
-                  ->where(DB::raw('YEAR(a.jam_masuk_iso)'), $year);
+                ->where(DB::raw('YEAR(a.jam_masuk_iso)'), $year);
         }
 
         $rows = $query->orderBy('a.jam_masuk_iso', 'desc')
-                      ->orderBy('u.nama', 'asc')
-                      ->get();
+            ->orderBy('u.nama', 'asc')
+            ->get();
 
         if ($rows->isEmpty()) {
             return redirect()->back()->with('error', 'Data tidak ditemukan untuk periode/kategori yang dipilih.');
@@ -323,57 +326,63 @@ class ExportController extends Controller
         if ($format === 'per_employee') {
             $currentMonthTracking = [];
             foreach ($rows as $r) {
-                if (!$r->tanggal) continue;
-                
+                if (! $r->tanggal) {
+                    continue;
+                }
+
                 $rowMonth = date('Y-m', strtotime($r->tanggal));
-                
-                if (!isset($sheets[$r->nama])) {
+
+                if (! isset($sheets[$r->nama])) {
                     $sheets[$r->nama] = [
-                        'title' => "Laporan Presensi - " . $r->nama,
+                        'title' => 'Laporan Presensi - '.$r->nama,
                         'widths' => $widths,
                         'header' => $header,
-                        'rows' => []
+                        'rows' => [],
                     ];
                     $currentMonthTracking[$r->nama] = null;
                 }
-                
+
                 if ($currentMonthTracking[$r->nama] !== $rowMonth) {
                     $currentMonthTracking[$r->nama] = $rowMonth;
                     $mObj = date_create_from_format('Y-m', $rowMonth);
-                    $mIndex = (int)$mObj->format('n');
+                    $mIndex = (int) $mObj->format('n');
                     $mYear = $mObj->format('Y');
                     $mName = $m_names[$mIndex] ?? $mObj->format('F');
-                    
-                    if (!empty($sheets[$r->nama]['rows'])) {
+
+                    if (! empty($sheets[$r->nama]['rows'])) {
                         $sheets[$r->nama]['rows'][] = [];
                     }
-                    $sheets[$r->nama]['rows'][] = ['=== BULAN: ' . strtoupper($mName . ' ' . $mYear) . ' ===', '', '', '', '', '', '', '', '', '_style' => 'sHeader'];
+                    $sheets[$r->nama]['rows'][] = ['=== BULAN: '.strtoupper($mName.' '.$mYear).' ===', '', '', '', '', '', '', '', '', '_style' => 'sHeader'];
                 }
-                
+
                 $sheets[$r->nama]['rows'][] = [
                     $r->tanggal, $r->nim, $r->nama, $r->startup,
                     $r->jam_masuk, $r->status_masuk, $r->jam_pulang,
-                    $r->ket, $r->laporan
+                    $r->ket, $r->laporan,
                 ];
             }
         } else {
-            $selectedMonthNames = array_map(function($m) use ($m_names) { return $m_names[$m] ?? $m; }, $monthsArr);
+            $selectedMonthNames = array_map(function ($m) use ($m_names) {
+                return $m_names[$m] ?? $m;
+            }, $monthsArr);
             $sheets['Combined'] = [
-                'title' => 'Data Presensi Lengkap - ' . ($filterType === 'monthly' ? "Bulan " . implode(', ', $selectedMonthNames) . " Tahun $year" : "Seluruh Periode"),
+                'title' => 'Data Presensi Lengkap - '.($filterType === 'monthly' ? 'Bulan '.implode(', ', $selectedMonthNames)." Tahun $year" : 'Seluruh Periode'),
                 'widths' => $widths,
                 'header' => $header,
-                'rows' => []
+                'rows' => [],
             ];
             foreach ($rows as $r) {
-                if (!$r->tanggal) continue;
+                if (! $r->tanggal) {
+                    continue;
+                }
                 $sheets['Combined']['rows'][] = [
                     $r->tanggal, $r->nim, $r->nama, $r->startup,
                     $r->jam_masuk, $r->status_masuk, $r->jam_pulang,
-                    $r->ket, $r->laporan
+                    $r->ket, $r->laporan,
                 ];
             }
         }
 
-        return $this->exportService->exportToExcelXML('export_presensi_' . date('Y-m-d'), $sheets);
+        return $this->exportService->exportToExcelXML('export_presensi_'.date('Y-m-d'), $sheets);
     }
 }

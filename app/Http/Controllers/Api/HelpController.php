@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminHelpRequest;
+use App\Services\ApiListing;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Exception;
+use Illuminate\Validation\ValidationException;
 
 class HelpController extends Controller
 {
@@ -15,22 +17,27 @@ class HelpController extends Controller
         try {
             $user = $request->user();
             $query = AdminHelpRequest::query();
-            
+
             if ($user->role !== 'admin') {
                 $query->where('user_id', $user->id);
             }
-            
-            $requests = $query->orderBy('created_at', 'desc')->get();
+
+            $requests = ApiListing::get($query->orderBy('created_at', 'desc'), $request);
+
             return response()->json([
-                'ok' => true, 
+                'ok' => true,
                 'message' => 'Berhasil mengambil data bantuan.',
-                'data' => $requests
+                ...$requests,
             ]);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok' => false, 
-                'message' => 'Gagal mengambil data bantuan.', 
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal mengambil data bantuan.',
             ], 500);
         }
     }
@@ -39,8 +46,8 @@ class HelpController extends Controller
     {
         try {
             $helpRequest = AdminHelpRequest::find($id);
-            
-            if (!$helpRequest) {
+
+            if (! $helpRequest) {
                 return response()->json(['ok' => false, 'message' => 'Data bantuan tidak ditemukan.'], 404);
             }
 
@@ -49,15 +56,19 @@ class HelpController extends Controller
             }
 
             return response()->json([
-                'ok' => true, 
+                'ok' => true,
                 'message' => 'Berhasil mengambil detail data bantuan.',
-                'data' => $helpRequest
+                'data' => $helpRequest,
             ]);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok' => false, 
-                'message' => 'Gagal mengambil detail data bantuan.', 
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal mengambil detail data bantuan.',
             ], 500);
         }
     }
@@ -98,9 +109,9 @@ class HelpController extends Controller
 
             if ($validator->fails()) {
                 return response()->json([
-                    'ok' => false, 
-                    'message' => 'Validasi gagal. Silakan lengkapi data Anda.', 
-                    'errors' => $validator->errors()
+                    'ok' => false,
+                    'message' => 'Validasi gagal. Silakan lengkapi data Anda.',
+                    'errors' => $validator->errors(),
                 ], 400);
             }
 
@@ -112,15 +123,19 @@ class HelpController extends Controller
             $helpRequest = AdminHelpRequest::create($data);
 
             return response()->json([
-                'ok' => true, 
-                'message' => 'Permintaan bantuan berhasil dikirim.', 
-                'data' => $helpRequest
+                'ok' => true,
+                'message' => 'Permintaan bantuan berhasil dikirim.',
+                'data' => $helpRequest,
             ], 201);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok' => false, 
-                'message' => 'Gagal mengirim permintaan bantuan.', 
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal mengirim permintaan bantuan.',
             ], 500);
         }
     }
@@ -129,8 +144,8 @@ class HelpController extends Controller
     {
         try {
             $helpRequest = AdminHelpRequest::find($id);
-            
-            if (!$helpRequest) {
+
+            if (! $helpRequest) {
                 return response()->json(['ok' => false, 'message' => 'Data bantuan tidak ditemukan.'], 404);
             }
 
@@ -145,15 +160,19 @@ class HelpController extends Controller
             $helpRequest->update($request->all());
 
             return response()->json([
-                'ok' => true, 
+                'ok' => true,
                 'message' => 'Permintaan bantuan berhasil diperbarui.',
-                'data' => $helpRequest
+                'data' => $helpRequest,
             ]);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok' => false, 
-                'message' => 'Gagal memperbarui permintaan bantuan.', 
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal memperbarui permintaan bantuan.',
             ], 500);
         }
     }
@@ -162,8 +181,8 @@ class HelpController extends Controller
     {
         try {
             $helpRequest = AdminHelpRequest::find($id);
-            
-            if (!$helpRequest) {
+
+            if (! $helpRequest) {
                 return response()->json(['ok' => false, 'message' => 'Data bantuan tidak ditemukan.'], 404);
             }
 
@@ -174,14 +193,18 @@ class HelpController extends Controller
             $helpRequest->delete();
 
             return response()->json([
-                'ok' => true, 
-                'message' => 'Data bantuan berhasil dihapus.'
+                'ok' => true,
+                'message' => 'Data bantuan berhasil dihapus.',
             ]);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok' => false, 
-                'message' => 'Gagal menghapus data bantuan.', 
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal menghapus data bantuan.',
             ], 500);
         }
     }
@@ -200,32 +223,36 @@ class HelpController extends Controller
 
             if ($validator->fails()) {
                 return response()->json([
-                    'ok' => false, 
-                    'message' => 'Validasi gagal.', 
-                    'errors' => $validator->errors()
+                    'ok' => false,
+                    'message' => 'Validasi gagal.',
+                    'errors' => $validator->errors(),
                 ], 400);
             }
 
             $helpRequest = AdminHelpRequest::find($id);
-            if (!$helpRequest) {
+            if (! $helpRequest) {
                 return response()->json(['ok' => false, 'message' => 'Permintaan tidak ditemukan.'], 404);
             }
 
             $helpRequest->update([
                 'status' => $request->status,
-                'admin_note' => $request->admin_note ?? $helpRequest->admin_note
+                'admin_note' => $request->admin_note ?? $helpRequest->admin_note,
             ]);
 
             return response()->json([
-                'ok' => true, 
+                'ok' => true,
                 'message' => 'Status bantuan berhasil diperbarui.',
-                'data' => $helpRequest
+                'data' => $helpRequest,
             ]);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok' => false, 
-                'message' => 'Gagal memperbarui status bantuan.', 
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal memperbarui status bantuan.',
             ], 500);
         }
     }

@@ -3,15 +3,20 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\AdminAttendanceRequest;
 use App\Models\Attendance;
-use Illuminate\Support\Carbon;
+use App\Services\Attendance\AdminAttendance;
+use App\Services\Attendance\AttendanceCorrection;
+use App\Services\Attendance\AttendanceSubmission;
+use App\Traits\ImageOptimizer;
 use Exception;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 class AttendanceController extends Controller
 {
-    use \App\Traits\ImageOptimizer;
+    use ImageOptimizer;
 
     /**
      * Ambil semua data presensi (admin only).
@@ -30,39 +35,43 @@ class AttendanceController extends Controller
                 // Hanya ambil kolom minimal — JANGAN ambil foto/embedding
                 $query->select('id', 'nama', 'email', 'nim', 'role', 'prodi', 'startup');
             }])
-            ->select(
-                'id', 'user_id',
-                'jam_masuk', 'jam_masuk_iso',
-                'jam_pulang', 'jam_pulang_iso',
-                'lat_masuk', 'lng_masuk', 'lokasi_masuk',
-                'lat_pulang', 'lng_pulang', 'lokasi_pulang',
-                'ekspresi_masuk', 'ekspresi_pulang',
-                'landmark_masuk', 'landmark_pulang', // Pengganti screenshot (jauh lebih kecil)
-                'foto_masuk', 'foto_pulang', // Bukti gambar kompresi (10-20KB)
-                'ket', 'status',
-                'alasan_wfa', 'alasan_overtime', 'alasan_pulang_awal',
-                'is_overtime', 'overtime_bonus',
-                'created_at', 'updated_at'
-            )
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+                ->select(
+                    'id', 'user_id',
+                    'jam_masuk', 'jam_masuk_iso',
+                    'jam_pulang', 'jam_pulang_iso',
+                    'lat_masuk', 'lng_masuk', 'lokasi_masuk',
+                    'lat_pulang', 'lng_pulang', 'lokasi_pulang',
+                    'ekspresi_masuk', 'ekspresi_pulang',
+                    'landmark_masuk', 'landmark_pulang', // Pengganti screenshot (jauh lebih kecil)
+                    'foto_masuk', 'foto_pulang', // Bukti gambar kompresi (10-20KB)
+                    'ket', 'status',
+                    'alasan_wfa', 'alasan_overtime', 'alasan_pulang_awal',
+                    'is_overtime', 'overtime_bonus',
+                    'created_at', 'updated_at'
+                )
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage);
 
             return response()->json([
-                'ok'      => true,
+                'ok' => true,
                 'message' => 'Berhasil mengambil data absensi',
-                'data'    => $attendances->items(),
-                'meta'    => [
+                'data' => $attendances->items(),
+                'meta' => [
                     'current_page' => $attendances->currentPage(),
-                    'last_page'    => $attendances->lastPage(),
-                    'per_page'     => $attendances->perPage(),
-                    'total'        => $attendances->total(),
+                    'last_page' => $attendances->lastPage(),
+                    'per_page' => $attendances->perPage(),
+                    'total' => $attendances->total(),
                 ],
             ]);
         } catch (\Throwable $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok'          => false,
-                'message'     => 'Gagal mengambil data absensi',
-                'debug_error' => $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()
+                'ok' => false,
+                'message' => 'Gagal mengambil data absensi',
             ], 500);
         }
     }
@@ -77,7 +86,7 @@ class AttendanceController extends Controller
                 $q->select('id', 'nama', 'email', 'nim', 'role', 'prodi', 'startup');
             }])->find($id);
 
-            if (!$attendance) {
+            if (! $attendance) {
                 return response()->json(['ok' => false, 'message' => 'Data absensi tidak ditemukan'], 404);
             }
 
@@ -87,15 +96,19 @@ class AttendanceController extends Controller
             }
 
             return response()->json([
-                'ok'      => true,
+                'ok' => true,
                 'message' => 'Berhasil mengambil data absensi',
-                'data'    => $attendance
+                'data' => $attendance,
             ]);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok'          => false,
-                'message'     => 'Gagal mengambil data absensi',
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal mengambil data absensi',
             ], 500);
         }
     }
@@ -103,50 +116,15 @@ class AttendanceController extends Controller
     /**
      * Admin buat data presensi manual (izin/sakit/wfo/wfa).
      */
-    public function store(Request $request)
+    public function store(AdminAttendanceRequest $request)
     {
-        try {
-            if ($request->user()->role !== 'admin') {
-                return response()->json(['ok' => false, 'message' => 'Hanya admin yang dapat menambah data'], 403);
-            }
+        $attendance = app(AdminAttendance::class)
+            ->create($request->validated(), $request->user()->id);
 
-            $validator = Validator::make($request->all(), [
-                'user_id' => 'required|exists:users,id',
-                'tanggal' => 'required|date',
-                'ket'     => 'required|in:izin,sakit,wfo,wfa,overtime',
-                'status'  => 'required|string',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json(['ok' => false, 'errors' => $validator->errors()], 400);
-            }
-
-            $data    = $request->all();
-            $tanggal = $request->tanggal;
-
-            if (in_array($request->ket, ['izin', 'sakit'])) {
-                $data['jam_masuk']     = '08:00';
-                $data['jam_pulang']    = '17:00';
-                $data['jam_masuk_iso'] = $tanggal . ' 08:00:00';
-                $data['jam_pulang_iso'] = $tanggal . ' 17:00:00';
-            } else {
-                $data['jam_masuk']     = $request->jam_masuk ?? '08:00';
-                $data['jam_masuk_iso'] = $request->jam_masuk_iso ?? Carbon::now();
-            }
-
-            $attendance = Attendance::create($data);
-
-            return response()->json([
-                'ok'      => true,
-                'message' => 'Berhasil menambahkan data absensi',
-                'data'    => $attendance
-            ], 201);
-        } catch (Exception $e) {
-            return response()->json(['ok' => false, 'debug_error' => $e->getMessage()], 500);
-        }
+        return response()->json(['ok' => true, 'message' => 'Berhasil menambahkan data absensi', 'data' => $attendance], 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(AdminAttendanceRequest $request, $id)
     {
         try {
             if ($request->user()->role !== 'admin') {
@@ -154,30 +132,29 @@ class AttendanceController extends Controller
             }
 
             $attendance = Attendance::find($id);
-            if (!$attendance) {
+            if (! $attendance) {
                 return response()->json(['ok' => false, 'message' => 'Data absensi tidak ditemukan'], 404);
             }
 
-            // Hanya update field yang diperbolehkan (bukan landmark — landmark dikirim dari device)
-            $attendance->update($request->only([
-                'jam_masuk', 'jam_masuk_iso', 'jam_pulang', 'jam_pulang_iso',
-                'lat_masuk', 'lng_masuk', 'lokasi_masuk',
-                'lat_pulang', 'lng_pulang', 'lokasi_pulang',
-                'ket', 'status', 'alasan_wfa', 'alasan_overtime',
-                'alasan_izin_sakit', 'bukti_izin_sakit', 'alasan_pulang_awal',
-                'is_overtime', 'overtime_bonus', 'daily_report_id',
-            ]));
+            $attendance = app(AttendanceCorrection::class)->update(
+                $attendance->id, $request->validated(), $request->user()->id,
+                $request->input('correction_reason', 'Koreksi melalui API admin')
+            );
 
             return response()->json([
-                'ok'      => true,
+                'ok' => true,
                 'message' => 'Berhasil mengubah data absensi',
-                'data'    => $attendance
+                'data' => $attendance,
             ]);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok'          => false,
-                'message'     => 'Gagal mengubah data absensi',
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal mengubah data absensi',
             ], 500);
         }
     }
@@ -190,7 +167,7 @@ class AttendanceController extends Controller
             }
 
             $attendance = Attendance::find($id);
-            if (!$attendance) {
+            if (! $attendance) {
                 return response()->json(['ok' => false, 'message' => 'Data absensi tidak ditemukan'], 404);
             }
 
@@ -198,10 +175,14 @@ class AttendanceController extends Controller
 
             return response()->json(['ok' => true, 'message' => 'Berhasil menghapus data absensi']);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok'          => false,
-                'message'     => 'Gagal menghapus data absensi',
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal menghapus data absensi',
             ], 500);
         }
     }
@@ -212,143 +193,35 @@ class AttendanceController extends Controller
      */
     public function clockIn(Request $request)
     {
-        try {
-            $validator = Validator::make($request->all(), [
-                'lat_masuk'      => 'required|numeric',
-                'lng_masuk'      => 'required|numeric',
-                'lokasi_masuk'   => 'required|string',
-                'ket'            => 'required|in:wfo,wfa,overtime',
-                'landmark_masuk' => 'nullable|string',
-                'ekspresi_masuk' => 'nullable|string',
-                'image'          => 'nullable|string',
-            ], [
-                'lat_masuk.required'    => 'Latitude lokasi masuk wajib diisi.',
-                'lng_masuk.required'    => 'Longitude lokasi masuk wajib diisi.',
-                'lokasi_masuk.required' => 'Nama lokasi masuk wajib diisi.',
-                'ket.required'         => 'Keterangan presensi (WFO/WFA/Overtime) wajib dipilih.',
-                'ket.in'               => 'Keterangan presensi harus berupa wfo, wfa, atau overtime.',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'ok'      => false,
-                    'message' => 'Validasi gagal. Silakan periksa kembali data Anda.',
-                    'errors'  => $validator->errors()
-                ], 400);
-            }
-
-            $user = $request->user();
-
-            // Cek apakah sudah absen masuk hari ini
-            $existing = Attendance::where('user_id', $user->id)
-                ->whereDate('jam_masuk_iso', Carbon::today())
-                ->first();
-
-            if ($existing) {
-                return response()->json([
-                    'ok'      => false,
-                    'message' => 'Anda sudah melakukan absen masuk untuk hari ini.'
-                ], 400);
-            }
-
-            $attendance = Attendance::create([
-                'user_id'        => $user->id,
-                'jam_masuk'      => Carbon::now()->format('H:i'),
-                'jam_masuk_iso'  => Carbon::now(),
-                'lat_masuk'      => $request->lat_masuk,
-                'lng_masuk'      => $request->lng_masuk,
-                'lokasi_masuk'   => $request->lokasi_masuk,
-                'ket'            => $request->ket,
-                'status'         => 'ontime',
-                'landmark_masuk' => $request->landmark_masuk,
-                'ekspresi_masuk' => $request->ekspresi_masuk,
-                'foto_masuk'     => $request->image ? 'attendance/' . $this->optimizeAndSaveBase64($request->image, 'attendance', null, 200, 60) : null,
-            ]);
-
-            return response()->json([
-                'ok'      => true,
-                'message' => 'Absen masuk berhasil dilakukan. Semangat bekerja!',
-                'data'    => $attendance
-            ], 201);
-        } catch (Exception $e) {
-            return response()->json([
-                'ok'          => false,
-                'message'     => 'Terjadi kesalahan sistem saat melakukan absen masuk.',
-                'debug_error' => $e->getMessage()
-            ], 500);
-        }
+        return $this->submitAttendance($request, 'masuk');
     }
 
-    /**
-     * Clock Out — Absen Pulang.
-     * Menerima landmark wajah JSON (68 titik) sebagai pengganti screenshot.
-     */
     public function clockOut(Request $request)
     {
-        try {
-            $validator = Validator::make($request->all(), [
-                'lat_pulang'      => 'required|numeric',
-                'lng_pulang'      => 'required|numeric',
-                'lokasi_pulang'   => 'required|string',
-                'landmark_pulang' => 'nullable|string',
-                'ekspresi_pulang' => 'nullable|string',
-                'image'           => 'nullable|string',
-            ], [
-                'lat_pulang.required'    => 'Latitude lokasi pulang wajib diisi.',
-                'lng_pulang.required'    => 'Longitude lokasi pulang wajib diisi.',
-                'lokasi_pulang.required' => 'Nama lokasi pulang wajib diisi.',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'ok'      => false,
-                    'message' => 'Validasi gagal. Silakan periksa kembali data Anda.',
-                    'errors'  => $validator->errors()
-                ], 400);
-            }
-
-            $user = $request->user();
-
-            $attendance = Attendance::where('user_id', $user->id)
-                ->whereDate('jam_masuk_iso', Carbon::today())
-                ->whereNull('jam_pulang')
-                ->first();
-
-            if (!$attendance) {
-                return response()->json([
-                    'ok'      => false,
-                    'message' => 'Data absen masuk hari ini tidak ditemukan atau Anda sudah melakukan absen pulang.'
-                ], 400);
-            }
-
-            $attendance->update([
-                'jam_pulang'      => Carbon::now()->format('H:i'),
-                'jam_pulang_iso'  => Carbon::now(),
-                'lat_pulang'      => $request->lat_pulang,
-                'lng_pulang'      => $request->lng_pulang,
-                'lokasi_pulang'   => $request->lokasi_pulang,
-                'landmark_pulang' => $request->landmark_pulang,
-                'ekspresi_pulang' => $request->ekspresi_pulang,
-                'foto_pulang'     => $request->image ? 'attendance/' . $this->optimizeAndSaveBase64($request->image, 'attendance', null, 200, 60) : null,
-            ]);
-
-            return response()->json([
-                'ok'      => true,
-                'message' => 'Absen pulang berhasil dilakukan. Hati-hati di jalan!',
-                'data'    => $attendance
-            ]);
-        } catch (Exception $e) {
-            return response()->json([
-                'ok'          => false,
-                'message'     => 'Terjadi kesalahan sistem saat melakukan absen pulang.',
-                'debug_error' => $e->getMessage()
-            ], 500);
-        }
+        return $this->submitAttendance($request, 'pulang');
     }
 
-    /**
-     * Presensi hari ini milik user yang sedang login.
-     */
+    private function submitAttendance(Request $request, string $mode)
+    {
+        $user = $request->user();
+        $input = $request->all();
+        $input['nim'] = (string) $user->nim;
+        $input['mode'] = $mode;
+        foreach (['lat', 'lng', 'lokasi', 'ekspresi', 'landmark'] as $field) {
+            $input[$field] = $request->input($field.'_'.$mode, $request->input($field));
+        }
+        $input['screenshot'] = $request->input('image', $request->input('screenshot'));
+        $input['request_id'] = $request->header('Idempotency-Key', $request->input('request_id'));
+        $result = app(AttendanceSubmission::class)->submit($input, $user->only(['id', 'role', 'nim']));
+        $body = $result->getData(true);
+        if (! empty($body['ok'])) {
+            $body['data'] = Attendance::where('user_id', $user->id)
+                ->whereDate('jam_masuk_iso', Carbon::today())->first();
+        }
+
+        return response()->json($body, ! empty($body['ok']) && $mode === 'masuk' ? 201 : $result->getStatusCode());
+    }
+
     public function today(Request $request)
     {
         try {
@@ -362,16 +235,20 @@ class AttendanceController extends Controller
                 'ekspresi_masuk', 'ekspresi_pulang',
                 'created_at'
             )
-            ->where('user_id', $request->user()->id)
-            ->whereDate('jam_masuk_iso', Carbon::today())
-            ->first();
+                ->where('user_id', $request->user()->id)
+                ->whereDate('jam_masuk_iso', Carbon::today())
+                ->first();
 
             return response()->json(['ok' => true, 'message' => 'Berhasil mengambil absensi hari ini', 'data' => $attendance]);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok'          => false,
-                'message'     => 'Gagal mengambil data absensi hari ini',
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal mengambil data absensi hari ini',
             ], 500);
         }
     }

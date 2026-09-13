@@ -2,22 +2,21 @@
 
 namespace App\Traits;
 
-use Illuminate\Support\Facades\Storage;
 use Exception;
+use Illuminate\Support\Facades\Storage;
 
 trait ImageOptimizer
 {
     /**
      * Optimize and save base64 image as a compressed JPEG.
-     * 
-     * @param string $base64Data
-     * @param string $path Directory path within 'public' disk
-     * @param string $filename Custom filename (optional)
-     * @param int $maxWidth Max width for the image
-     * @param int $quality JPEG quality (0-100)
+     *
+     * @param  string  $path  Directory path within 'public' disk
+     * @param  string  $filename  Custom filename (optional)
+     * @param  int  $maxWidth  Max width for the image
+     * @param  int  $quality  JPEG quality (0-100)
      * @return string|null The saved filename or null on failure
      */
-    public function optimizeAndSaveBase64(string $base64Data, string $path, string $filename = null, int $maxWidth = 300, int $quality = 60): ?string
+    public function optimizeAndSaveBase64(string $base64Data, string $path, ?string $filename = null, int $maxWidth = 300, int $quality = 60): ?string
     {
         try {
             // Remove base64 header if exists
@@ -28,12 +27,23 @@ trait ImageOptimizer
                 $type = 'jpg'; // assume jpg if no header
             }
 
-            $imageData = base64_decode($base64Data);
-            if (!$imageData) return null;
+            if (strlen($base64Data) > 16 * 1024 * 1024) {
+                return null;
+            }
+            $imageData = base64_decode($base64Data, true);
+            if (! $imageData) {
+                return null;
+            }
 
             // Load image using GD
+            $dimensions = @getimagesizefromstring($imageData);
+            if (! $dimensions || $dimensions[0] * $dimensions[1] > 25000000) {
+                return null;
+            }
             $srcImage = \imagecreatefromstring($imageData);
-            if (!$srcImage) return null;
+            if (! $srcImage) {
+                return null;
+            }
 
             // Get original dimensions
             $width = \imagesx($srcImage);
@@ -49,24 +59,27 @@ trait ImageOptimizer
 
             // Create new true color image
             $dstImage = \imagecreatetruecolor($newWidth, $newHeight);
-            
+
             // Preserve transparency for PNGs if needed (but we'll convert to JPG for size)
             \imagecopyresampled($dstImage, $srcImage, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
             // Generate filename if not provided
-            if (!$filename) {
-                $filename = uniqid('img_') . '_' . time() . '.jpg';
+            if (! $filename) {
+                $filename = uniqid('img_').'_'.time().'.jpg';
             }
 
             // Ensure directory exists
-            if (!Storage::disk('public')->exists($path)) {
+            if (! Storage::disk('public')->exists($path)) {
                 Storage::disk('public')->makeDirectory($path);
             }
 
-            $fullPath = storage_path('app/public/' . $path . '/' . $filename);
+            $fullPath = storage_path('app/private/'.($path === 'temp' ? '' : 'media/').$path.'/'.$filename);
+            \Illuminate\Support\Facades\File::ensureDirectoryExists(dirname($fullPath), 0700);
 
             // Save as JPEG with compression
-            \imagejpeg($dstImage, $fullPath, $quality);
+            if (! \imagejpeg($dstImage, $fullPath, $quality)) {
+                return null;
+            }
 
             // Free memory
             \imagedestroy($srcImage);
@@ -74,7 +87,8 @@ trait ImageOptimizer
 
             return $filename;
         } catch (Exception $e) {
-            \Log::error('Image Optimization Failed: ' . $e->getMessage());
+            \Log::error('Image Optimization Failed: '.$e->getMessage());
+
             return null;
         }
     }

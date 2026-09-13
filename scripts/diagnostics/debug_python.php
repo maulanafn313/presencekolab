@@ -1,4 +1,9 @@
 <?php
+
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
 // Test script to check python visibility
 header('Content-Type: text/plain');
 
@@ -13,11 +18,10 @@ if (file_exists($pythonPath)) {
 
 echo "\nTrying to run 'python --version' via shell_exec:\n";
 $output = shell_exec('python --version 2>&1');
-echo "Output: " . ($output ?: "NULL (No output)") . "\n";
+echo 'Output: '.($output ?: 'NULL (No output)')."\n";
 
 echo "\nTrying to run absolute path via shell_exec:\n";
-$outputAbs = shell_exec('"' . $pythonPath . '" --version 2>&1');
-echo "Output: " . ($outputAbs ?: "NULL (No output)") . "\n";
+$outputAbs = shell_exec('"'.$pythonPath.'" --version 2>&1');
+echo 'Output: '.($outputAbs ?: 'NULL (No output)')."\n";
 
-echo "\nPHP User: " . get_current_user() . "\n";
-?>
+echo "\nPHP User: ".get_current_user()."\n";

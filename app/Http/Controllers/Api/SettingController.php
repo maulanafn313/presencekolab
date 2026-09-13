@@ -4,30 +4,44 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
-use Illuminate\Http\Request;
+use App\Services\ApiListing;
+use App\Services\SettingVisibility;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class SettingController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $settings = Setting::all();
+            $query = Setting::query();
+            if ($request->user()?->role !== 'admin') {
+                $query->whereIn('setting_key', SettingVisibility::CLIENT_KEYS);
+            }
+            $listing = ApiListing::get($query->orderBy('id'), $request);
+            $settings = $listing['data'];
             $formatted = [];
             foreach ($settings as $s) {
                 $formatted[$s->setting_key] = $s->setting_value;
             }
+
             return response()->json([
-                'ok' => true, 
+                'ok' => true,
                 'message' => 'Berhasil mengambil pengaturan.',
-                'data' => $formatted
+                'data' => $formatted,
+                ...(isset($listing['meta']) ? ['meta' => $listing['meta']] : []),
             ]);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok' => false, 
-                'message' => 'Gagal mengambil pengaturan.', 
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal mengambil pengaturan.',
             ], 500);
         }
     }
@@ -40,21 +54,25 @@ class SettingController extends Controller
             }
 
             $setting = Setting::where('setting_key', $key)->first();
-            
-            if (!$setting) {
+
+            if (! $setting) {
                 return response()->json(['ok' => false, 'message' => 'Pengaturan tidak ditemukan.'], 404);
             }
 
             return response()->json([
-                'ok' => true, 
+                'ok' => true,
                 'message' => 'Berhasil mengambil data pengaturan.',
-                'data' => $setting
+                'data' => $setting,
             ]);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok' => false, 
-                'message' => 'Gagal mengambil data pengaturan.', 
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal mengambil data pengaturan.',
             ], 500);
         }
     }
@@ -76,27 +94,31 @@ class SettingController extends Controller
 
             if ($validator->fails()) {
                 return response()->json([
-                    'ok' => false, 
-                    'message' => 'Validasi gagal.', 
-                    'errors' => $validator->errors()
+                    'ok' => false,
+                    'message' => 'Validasi gagal.',
+                    'errors' => $validator->errors(),
                 ], 400);
             }
 
             $setting = Setting::create([
                 'setting_key' => $request->setting_key,
-                'setting_value' => $request->setting_value ?? ''
+                'setting_value' => $request->setting_value ?? '',
             ]);
 
             return response()->json([
-                'ok' => true, 
+                'ok' => true,
                 'message' => 'Pengaturan berhasil ditambahkan.',
-                'data' => $setting
+                'data' => $setting,
             ], 201);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok' => false, 
-                'message' => 'Gagal menambahkan pengaturan.', 
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal menambahkan pengaturan.',
             ], 500);
         }
     }
@@ -109,16 +131,18 @@ class SettingController extends Controller
             }
 
             $data = $request->all();
-            
+
             // Hapus key 'ajax' jika ada
             unset($data['ajax']);
 
             foreach ($data as $key => $value) {
-                if ($value === null) continue;
+                if ($value === null) {
+                    continue;
+                }
 
                 Setting::updateOrCreate(
                     ['setting_key' => $key],
-                    ['setting_value' => (string)$value]
+                    ['setting_value' => (string) $value]
                 );
             }
 
@@ -130,18 +154,23 @@ class SettingController extends Controller
             }
 
             return response()->json([
-                'ok' => true, 
+                'ok' => true,
                 'message' => 'Pengaturan berhasil diperbarui.',
-                'data' => $formatted // Mengembalikan objek settings terbaru
+                'data' => $formatted, // Mengembalikan objek settings terbaru
             ]);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok' => false, 
-                'message' => 'Gagal memperbarui pengaturan.', 
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal memperbarui pengaturan.',
             ], 500);
         }
     }
+
     public function destroy(Request $request, $key)
     {
         try {
@@ -150,22 +179,26 @@ class SettingController extends Controller
             }
 
             $setting = Setting::where('setting_key', $key)->first();
-            
-            if (!$setting) {
+
+            if (! $setting) {
                 return response()->json(['ok' => false, 'message' => 'Pengaturan tidak ditemukan.'], 404);
             }
 
             $setting->delete();
 
             return response()->json([
-                'ok' => true, 
-                'message' => 'Pengaturan berhasil dihapus.'
+                'ok' => true,
+                'message' => 'Pengaturan berhasil dihapus.',
             ]);
         } catch (Exception $e) {
+            if ($e instanceof ValidationException) {
+                throw $e;
+            }
+            report($e);
+
             return response()->json([
-                'ok' => false, 
-                'message' => 'Gagal menghapus pengaturan.', 
-                'debug_error' => $e->getMessage()
+                'ok' => false,
+                'message' => 'Gagal menghapus pengaturan.',
             ], 500);
         }
     }

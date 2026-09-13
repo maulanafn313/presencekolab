@@ -2,10 +2,14 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "test:browser": "playwright test",
+        "test": "node --test tests/JavaScript/*.test.cjs",
         "build": "vite build",
         "dev": "vite"
     },
     "devDependencies": {
+        "@axe-core/playwright": "^4.13.0",
+        "@playwright/test": "^1.63.0",
         "@tailwindcss/vite": "^4.0.0",
         "axios": "^1.7.4",
         "concurrently": "^9.0.1",

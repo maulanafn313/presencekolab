@@ -189,8 +189,8 @@
     <div class="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-sm text-center">
         <p id="confirm-modal-message" class="text-lg mb-6">Apakah Anda yakin?</p>
         <div class="flex justify-center space-x-4">
-            <button id="btn-confirm-no" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-6 rounded-lg">Tidak</button>
-            <button id="btn-confirm-yes" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg">Ya</button>
+            <button type="button" id="btn-confirm-no" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-6 rounded-lg">Tidak</button>
+            <button type="button" id="btn-confirm-yes" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg">Ya</button>
         </div>
     </div>
 </div>

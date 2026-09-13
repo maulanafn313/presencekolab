@@ -20,7 +20,7 @@ class EmployeeWorkSchedule extends Model
         'is_working_day' => 'boolean',
     ];
 
-    public function user()
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class);
     }

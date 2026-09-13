@@ -27,10 +27,11 @@ IMAGE_FORMAT = 'JPEG'
 IMAGE_QUALITY = 95
 
 # Database settings
-DB_HOST = 'localhost'
-DB_NAME = 'laravel_absen_db'
-DB_USER = 'root'
-DB_PASS = ''
+DB_HOST = os.environ.get('DB_HOST', '127.0.0.1')
+DB_PORT = int(os.environ.get('DB_PORT', '3306'))
+DB_NAME = os.environ.get('DB_DATABASE', '')
+DB_USER = os.environ.get('DB_USERNAME', '')
+DB_PASS = os.environ.get('DB_PASSWORD', '')
 
 # API settings
 API_TIMEOUT = 30

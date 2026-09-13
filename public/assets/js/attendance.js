@@ -449,9 +449,11 @@ async function loadLabeledFaceDescriptors() {
                         formData.append('embedding', JSON.stringify(Array.from(det.descriptor)));
                         formData.append('landmarks', JSON.stringify(det.landmarks.positions));
                         
-                        api('?ajax=save_face_embedding', formData).catch(err => {
-                            console.error('Failed to save embedding for', name, err);
-                        });
+                        if (window.USER_ROLE === 'admin') {
+                            api('?ajax=save_face_embedding', formData).catch(err => {
+                                console.error('Failed to save embedding for', name, err);
+                            });
+                        }
                     }
                 } catch (err) { console.warn('Detection failed for', name, err); }
             }
@@ -1233,23 +1235,6 @@ function captureCompressedScreenshot() {
         console.warn('Capture error:', e);
         return null;
     }
-}
-
-/**
- * Ekstrak 68 titik landmark dari objek deteksi face-api.js.
- * Koordinat dinormalisasi (0.0 - 1.0) relatif terhadap bounding box wajah.
- * @param {object} detection - Objek deteksi dari face-api.js
- * @returns {Array|null} Array [{x,y},...] atau null
- */
-function extractFaceLandmarks(detection) {
-    if (!detection || !detection.landmarks) return null;
-    const landmarks = detection.landmarks.positions;
-    const box = detection.detection.box;
-    // Normalisasi agar landmark bisa dirender di canvas dengan ukuran apapun
-    return landmarks.map(p => ({
-        x: (p.x - box.x) / box.width,
-        y: (p.y - box.y) / box.height
-    }));
 }
 
 /**

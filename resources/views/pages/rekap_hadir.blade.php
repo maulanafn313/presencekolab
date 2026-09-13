@@ -485,7 +485,7 @@
         <!-- Angry Cat Overlay -->
         <div id="angry-cat-overlay">
             <div class="angry-cat-container">
-                <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHYzeHExbmpxNmR4Znd5N3R4eG54eG54eG54eG54eG54eG54eG54JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1z/26n6WywWKAODN3uHC/giphy.gif" alt="Angry Cat" class="w-full h-full object-contain">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='10' y='20' width='80' height='60' rx='10' fill='%23FF5252'/%3E%3Ccircle cx='30' cy='45' r='8' fill='white'/%3E%3Ccircle cx='70' cy='45' r='8' fill='white'/%3E%3Ccircle cx='30' cy='45' r='3' fill='black'/%3E%3Ccircle cx='70' cy='45' r='3' fill='black'/%3E%3Cpath d='M 30 65 Q 50 55 70 65' stroke='white' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Cpath d='M 15 10 L 30 20' stroke='%23FF5252' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M 85 10 L 70 20' stroke='%23FF5252' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E" alt="Angry Mascot" class="w-full h-full object-contain">
             </div>
         </div>
     </div>

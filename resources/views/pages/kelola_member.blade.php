@@ -261,7 +261,7 @@ async function loadInternGroups(silent) {
 
     try {
         // Cache-busting: tambah timestamp agar browser tidak cache response
-        const res = await fetch('?ajax=get_intern_groups&_t=' + Date.now());
+        const res = await fetch('/api/intern-groups?_t=' + Date.now());
         const data = await res.json();
         if (!data.ok) throw new Error(data.message);
         window._internGroups = data.data || [];
@@ -359,7 +359,7 @@ async function submitGroupForm() {
     fd.append('tanggal_mulai', mulai);
     fd.append('tanggal_selesai', selesai);
     try {
-        const res = await fetch('?ajax=save_intern_group&_t=' + Date.now(), {method:'POST', body: fd});
+        const res = await fetch('/api/intern-groups', {method:'POST', body: fd});
         const data = await res.json();
         if (!data.ok) { errEl.textContent = data.message; return; }
         closeGroupModal();
@@ -393,7 +393,7 @@ async function openManageMembers(groupId) {
         // Load current members for this group (cache-busting)
         const ts = Date.now();
         const [membersRes, allRes] = await Promise.all([
-            fetch('?ajax=get_group_members&group_id=' + groupId + '&_t=' + ts),
+            fetch('/api/intern-groups/members?group_id=' + groupId + '&_t=' + ts),
             fetch('?ajax=get_members&no_embeddings=1&light=1&_t=' + ts)
         ]);
         const membersData = await membersRes.json();
@@ -463,7 +463,7 @@ async function submitManageMembers() {
     fd.append('group_id', _manageGroupId);
     _selectedMemberIds.forEach(id => fd.append('user_ids[]', id));
     try {
-        const res = await fetch('?ajax=assign_members_to_group&_t=' + Date.now(), {method:'POST', body: fd});
+        const res = await fetch('/api/intern-groups/assign-members', {method:'POST', body: fd});
         const data = await res.json();
         if (!data.ok) { showToast(data.message, 'error'); return; }
         closeManageMembersModal();
@@ -545,7 +545,14 @@ async function postGroupAction(action, id) {
     try {
         const fd = new FormData();
         fd.append('id', id);
-        const res = await fetch('?ajax=' + action + '&_t=' + Date.now(), {method:'POST', body: fd});
+        
+        let url = '';
+        if (action === 'archive_intern_group') url = '/api/intern-groups/archive';
+        else if (action === 'unarchive_intern_group') url = '/api/intern-groups/unarchive';
+        else if (action === 'delete_intern_group') url = '/api/intern-groups/delete';
+        else url = '?ajax=' + action;
+
+        const res = await fetch(url + '?_t=' + Date.now(), {method:'POST', body: fd});
         if (!res.ok) {
             return { ok: false, message: 'Server error (Status: ' + res.status + ')' };
         }

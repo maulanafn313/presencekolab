@@ -35,3 +35,10 @@ storage/app/torch_cache/
 resources/views/pages/php-error.log
 php-error.log  
  
+/test-results/
+/playwright-report/
+__pycache__/
+/storage/facenet-venv/
+/storage/framework/phpstan/
+/storage/framework/phpstan-tool.phar
+/storage/app/private/models/

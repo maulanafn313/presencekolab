@@ -33,7 +33,7 @@
         }
     </style>
 
-    <form id="settings-form" class="space-y-4">
+    <form id="settings-form" onsubmit="event.preventDefault(); handleSaveSettings(document.getElementById('btn-save-settings'));" class="space-y-4">
         <!-- Pengaturan Jam Presensi -->
         <details class="settings-accordion bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
             <summary class="p-4 sm:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
@@ -50,6 +50,11 @@
             </summary>
             <div class="accordion-content px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1 font-medium">Jam Minimal Absensi Masuk</label>
+                        <input type="time" id="min-checkin-hour" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" value="04:00">
+                        <p class="text-xs text-gray-500 mt-1">Pegawai tidak bisa presensi masuk sebelum jam ini</p>
+                    </div>
                     <div>
                         <label class="block text-xs text-gray-600 mb-1 font-medium">Jam Maksimal On Time</label>
                         <input type="time" id="max-ontime-hour" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" value="08:00">
@@ -548,13 +553,13 @@ async function handleSaveSettings(btn) {
         btn.innerHTML = '<i class="fi fi-sr-spinner animate-spin"></i> Menyimpan...';
         
         const getValue = (id) => document.getElementById(id)?.value || '';
-        const getHour = (id) => (getValue(id).split(':')[0] || '');
 
         // Collect all settings as POST data to the ajax_handler endpoint
         const data = new URLSearchParams();
         data.append('ajax', 'update_settings');
-        data.append('max_ontime_hour', getHour('max-ontime-hour'));
-        data.append('min_checkout_hour', getHour('min-checkout-hour'));
+        data.append('max_ontime_hour', getValue('max-ontime-hour'));
+        data.append('min_checkin_hour', getValue('min-checkin-hour'));
+        data.append('min_checkout_hour', getValue('min-checkout-hour'));
         data.append('wfo_address', getValue('wfo-address'));
         data.append('wfo_radius_m', getValue('wfo-radius'));
         data.append('attendance_period_end', getValue('attendance-period-end'));
@@ -599,7 +604,7 @@ async function handleSaveSettings(btn) {
         const resp = await fetch('?ajax=update_settings', {
             method: 'POST',
             body: data,
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' }
         });
         const json = await resp.json();
         
@@ -651,7 +656,7 @@ async function handleImportDB() {
         const res = await fetch('?ajax=import_db', {
             method: 'POST',
             body: formData,
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' }
         });
         
         const json = await res.json();

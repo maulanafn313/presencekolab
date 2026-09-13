@@ -1,0 +1,10 @@
+# Observed local environment, 2026-09-13. This is an inventory, not a resolved portable lock.
+# facenet-pytorch 2.6.0 dependency constraints differ from the installed newer torch/Pillow.
+# Use a separate virtual environment and validate the model before deployment.
+facenet-pytorch==2.6.0
+mysql-connector-python==9.6.0
+numpy==2.2.6
+opencv-python-headless==4.13.0.92
+pillow==12.2.0
+torch==2.13.0+cpu
+torchvision==0.28.0+cpu

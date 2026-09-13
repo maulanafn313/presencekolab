@@ -1,0 +1,8 @@
+# Target: isolated Python 3.11 environment. Do not install into the global Python 3.13 runtime.
+facenet-pytorch==2.6.0
+torch==2.2.2
+torchvision==0.17.2
+numpy==1.26.4
+Pillow==10.2.0
+opencv-python-headless==4.10.0.84
+mysql-connector-python==9.6.0

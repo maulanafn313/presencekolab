@@ -1,4 +1,4 @@
-    <!-- Modern Responsive Sidebar & Layout -->
+    <!-- Archived template: not loaded by the application. -->
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar Backdrop (Mobile) -->
         <div id="sidebar-backdrop" class="fixed inset-0 z-20 bg-black/50 transition-opacity opacity-0 pointer-events-none md:hidden" aria-hidden="true"></div>
@@ -1220,133 +1220,7 @@ async function idbSetDescriptors(versionKey, data){
     }catch(e){ return false; }
 }
 
-async function api(url, data, opts){
-    const options = opts || {};
-    try {
-        // Log the data being sent (but not the full screenshot to avoid console spam)
-        const logData = { ...data };
-        if (logData.screenshot) {
-            logData.screenshot = logData.screenshot.substring(0, 50) + '... (truncated)';
-        }
-        // ULTRA-FAST: Skip logging for maximum speed
-        
-        // Ensure URL is correct - use relative URL to avoid port issues
-        if (url.startsWith('http')) {
-            // If it's already a full URL, use it as is
-        } else if (url.startsWith('/')) {
-            // If it starts with /, it's already a proper relative URL
-        } else if (url.startsWith('?')) {
-            // If it starts with ?, it's a query string, use current page
-            url = window.location.pathname + url;
-        } else {
-            // If it's a relative URL, make it start with /api/
-            url = '/api/' + url.replace(/^\//, '');
-        }
-        
-        // Fallback: if URL contains localhost:3000, replace with current host
-        if (url.includes('localhost:3000')) {
-            url = url.replace('localhost:3000', window.location.host);
-        }
-        
-        // Additional fallback: if URL still contains localhost:3000, force use current origin
-        if (url.includes('localhost:3000')) {
-            url = window.location.origin + url.replace(/^https?:\/\/[^\/]+/, '');
-        }
-        
-        // Check cache for GET-like requests (ajax queries) - NEVER cache POST/PUT/DELETE
-        const method = (options.method || 'POST').toUpperCase();
-        if (options.cache !== false && method === 'GET' && !(data instanceof FormData)) {
-            const cachedResponse = apiCache.get(url, data);
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-        }
-
-        // ULTRA-FAST: Skip all logging for maximum speed
-        const res = await fetch(url, { 
-            method: method, 
-            body: data instanceof FormData ? data : new URLSearchParams(data),
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            },
-            // ULTRA-FAST: No timeout, let browser handle it for maximum speed
-        });
-        
-        // Check if response is ok
-        if (!res.ok) {
-            const errorText = await res.text();
-            console.error('API Error Response:', errorText);
-            
-            // Try to parse error response as JSON to check for special requirements
-            try {
-                const errorJson = JSON.parse(errorText);
-                if (!options.suppressModal && errorJson.message) {
-                    showModalNotif(errorJson.message, false, 'Gagal');
-                }
-                return errorJson; // Return parsed JSON error response directly
-            } catch (parseError) {
-                // If not JSON, continue with normal error handling
-            }
-            
-            let errorMessage = `Terjadi kesalahan (${res.status})`;
-            if (!options.suppressModal) {
-                showModalNotif(errorMessage, false, 'Gagal');
-            }
-            throw new Error(`HTTP error! status: ${res.status}, response: ${errorText}`);
-        }
-        
-        // Get response text first to check if it's valid JSON
-        const responseText = await res.text();
-        
-        // Try to parse as JSON
-        let json;
-        try {
-            json = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error('Response is not valid JSON:', responseText);
-            throw new Error('Server returned invalid JSON response');
-        }
-        
-        // Return the JSON response regardless of HTTP status code
-        // Let the calling function handle the business logic (ok: false, etc.)
-        if (!options.suppressModal) {
-            if(json && json.ok===true && json.message){
-                showModalNotif(json.message, true, 'Berhasil');
-            } else if(json && json.ok===false && json.message){
-                showModalNotif(json.message, false, 'Gagal');
-            }
-        }
-        return json;
-    } catch (error) {
-        console.error('API call failed:', error);
-        
-        // Perbaikan: Handle specific error types
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            console.error('Network error - check if server is running');
-            throw new Error('Koneksi ke server gagal. Pastikan server berjalan.');
-        } else if (error.message.includes('ERR_CONNECTION_REFUSED')) {
-            console.error('Connection refused - server not responding');
-            throw new Error('Server tidak merespons. Silakan coba lagi.');
-        }
-        
-        // Provide more specific error messages
-        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-            throw new Error('Tidak dapat terhubung ke server. Pastikan XAMPP sudah berjalan.');
-        } else if (error.message.includes('HTTP error! status: 400')) {
-            // Check if it's a time validation error
-            if (error.message.includes('Presensi masuk hanya tersedia') || error.message.includes('Presensi masuk tersedia')) {
-                throw new Error('Waktu presensi tidak sesuai. Silakan coba pada jam yang tepat.');
-            } else {
-                throw new Error('Data yang dikirim tidak valid. Silakan coba lagi.');
-            }
-        } else if (error.message.includes('HTTP error! status: 500')) {
-            throw new Error('Server error. Silakan coba lagi.');
-        }
-        
-        throw error;
-    }
-}
+// api() is shared through /assets/js/api-client.js.
 
 // Port Detection and Fix
 (function() {
@@ -1914,30 +1788,7 @@ function closeMobileSidebar() {
     document.body.style.overflow = '';
 }
 
-// Auto clear cache when website is opened
-(function() {
-    'use strict';
-    // Clear all caches
-    if ('caches' in window) {
-        caches.keys().then(function(names) {
-            for (let name of names) {
-                caches.delete(name);
-            }
-        });
-    }
-    // Clear service worker cache if exists
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            for(let registration of registrations) {
-                registration.unregister();
-            }
-        });
-    }
-    // Force reload if page is cached
-    if (window.performance && window.performance.navigation.type === window.performance.navigation.TYPE_BACK_FORWARD) {
-        window.location.reload();
-    }
-})();
+// Cache lifecycle is managed by sw.js; do not unregister it on each page load.
 
 // Mobile menu toggle
 document.addEventListener('DOMContentLoaded', () => {

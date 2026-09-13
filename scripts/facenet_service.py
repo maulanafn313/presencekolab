@@ -15,37 +15,22 @@ logger = logging.getLogger("FaceNetService")
 class FaceNetService:
     def __init__(self):
         # Path ke model .pth yang ditemukan user
-        self.model_path = r'd:\xampp\htdocs\Magang\LaravelAbsen\scripts\facenet-master\models\facenet_20180402_114759_vggface2.pth'
+        self.model_path = os.environ.get('FACENET_MODEL_PATH', os.path.join(os.path.dirname(__file__), 'facenet-master', 'models', 'facenet_20180402_114759_vggface2.pth'))
         
         logger.info("Initializing FaceNet (PyTorch version)...")
         
         # Inisialisasi MTCNN untuk deteksi wajah
         self.mtcnn = MTCNN(image_size=160, margin=32, keep_all=False, device='cpu')
         
-        # Initialize Resnet V1 (FaceNet architecture)
-        # Fallback to 'vggface2' pretrained if local file is missing
-        try:
-            if os.path.exists(self.model_path):
-                logger.info(f"Loading weights from {self.model_path}")
-                self.model = InceptionResnetV1(pretrained=None).eval()
-                state_dict = torch.load(self.model_path, map_location='cpu')
-                
-                # Filter out classification layer if it exists (we only need embeddings)
-                keys_to_remove = ["logits.weight", "logits.bias", "last_linear.weight", "last_linear.bias", "last_bn.weight", "last_bn.bias"]
-                for key in keys_to_remove:
-                    if key in state_dict:
-                        del state_dict[key]
-                        
-                self.model.load_state_dict(state_dict, strict=False)
-                logger.info("Model weights loaded successfully from local file.")
-            else:
-                logger.warning(f"Model file not found at {self.model_path}. Falling back to 'vggface2' pretrained weights.")
-                self.model = InceptionResnetV1(pretrained='vggface2').eval()
-                logger.info("Loaded built-in 'vggface2' weights successfully.")
-        except Exception as e:
-            logger.error(f"Error loading model weights: {str(e)}")
-            # Last resort fallback
-            self.model = InceptionResnetV1(pretrained='vggface2').eval()
+        # Keep all embedding layers: dropping last_linear/last_bn produces random embeddings.
+        if not os.path.isfile(self.model_path):
+            raise RuntimeError("Configured FaceNet model is missing")
+        state_dict = torch.load(self.model_path, map_location='cpu', weights_only=True)
+        state_dict.pop("logits.weight", None)
+        state_dict.pop("logits.bias", None)
+        self.model = InceptionResnetV1(pretrained=None).eval()
+        self.model.load_state_dict(state_dict, strict=True)
+        logger.info("FaceNet model loaded and all embedding weights validated.")
 
     def generate_embedding(self, image_path):
         """Menghasilkan embedding (sidik jari wajah) dari gambar."""

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -10,7 +11,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
@@ -47,12 +48,29 @@ class User extends Authenticatable
         'password',
         'password_hash',
         'remember_token',
+        'password_reset_token',
+        'password_reset_expires',
+        'face_embedding_128',
+        'advanced_features',
+        'facial_geometry',
+        'feature_vector',
         'google_authenticator_secret',
         // Data besar — hanya sertakan saat benar-benar dibutuhkan
         // (mis. endpoint khusus /api/face, bukan list user umum)
         'face_embedding',
         'face_landmarks',
     ];
+
+    /**
+     * Accessor untuk foto_base64 agar otomatis mengembalikan URL private media jika isinya nama file.
+     */
+    public function getFotoBase64Attribute($value)
+    {
+        if ($value && !str_starts_with($value, 'data:') && !str_starts_with($value, '/api/')) {
+            return \App\Services\PrivateMedia::url($value);
+        }
+        return $value;
+    }
 
     /**
      * Get the attributes that should be cast.

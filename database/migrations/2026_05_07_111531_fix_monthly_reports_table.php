@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -11,13 +11,15 @@ return new class extends Migration
     {
         Schema::table('monthly_reports', function (Blueprint $table) {
             // Tambahkan kolom content jika belum ada
-            if (!Schema::hasColumn('monthly_reports', 'content')) {
+            if (! Schema::hasColumn('monthly_reports', 'content')) {
                 $table->text('content')->nullable()->after('month');
             }
         });
 
         // Update ENUM status menggunakan DB statement karena Laravel Blueprint terbatas untuk modifikasi ENUM yang sudah ada
-        DB::statement("ALTER TABLE monthly_reports MODIFY COLUMN status ENUM('draft', 'pending', 'approved', 'disapproved', 'belum di approve') DEFAULT 'pending'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE monthly_reports MODIFY COLUMN status ENUM('draft', 'pending', 'approved', 'disapproved', 'belum di approve') DEFAULT 'pending'");
+        }
     }
 
     public function down(): void
@@ -27,7 +29,9 @@ return new class extends Migration
                 $table->dropColumn('content');
             }
         });
-        
-        DB::statement("ALTER TABLE monthly_reports MODIFY COLUMN status ENUM('draft', 'belum di approve', 'approved', 'disapproved') DEFAULT 'draft'");
+
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE monthly_reports MODIFY COLUMN status ENUM('draft', 'belum di approve', 'approved', 'disapproved') DEFAULT 'draft'");
+        }
     }
 };

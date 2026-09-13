@@ -9,7 +9,7 @@
     <!-- Floating Help Button -->
     <div id="admin-help-btn" class="fixed bottom-6 left-6 z-[60] animate-bounce-slow">
         <button class="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-tr from-blue-600 to-indigo-700 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 active:scale-95 transition-all group relative">
-            <i class="fi fi-rr-interrogation text-2xl md:text-3xl"></i>
+            <i class="fi fi-sr-interrogation text-2xl md:text-3xl"></i>
             <span class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white hidden" id="help-notif-dot"></span>
         </button>
     </div>
@@ -44,17 +44,17 @@
                             <i class="fi fi-sr-comment-alt text-base text-white"></i>
                         </a>
                         <button id="close-help-modal" class="w-9 h-9 hover:bg-white/20 rounded-full transition-colors flex items-center justify-center">
-                            <i class="fi fi-rr-cross text-lg text-white"></i>
+                            <i class="fi fi-sr-cross text-lg text-white"></i>
                         </button>
                     </div>
                 </div>
                 <!-- Tab Navigation -->
                 <div class="flex gap-1 bg-white/10 rounded-2xl p-1">
                     <button id="tab-bantuan" onclick="switchHelpTab('bantuan')" class="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all bg-white text-blue-700">
-                        <i class="fi fi-rr-headset mr-1"></i> Bantuan
+                        <i class="fi fi-sr-headset mr-1"></i> Bantuan
                     </button>
                     <button id="tab-status" onclick="switchHelpTab('status')" class="flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all text-white/80 hover:bg-white/10 relative">
-                        <i class="fi fi-rr-list-check mr-1"></i> Status Request
+                        <i class="fi fi-sr-list-check mr-1"></i> Status Request
                         <span id="status-tab-badge" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] flex items-center justify-center"></span>
                     </button>
                 </div>
@@ -75,7 +75,7 @@
                     <div id="help-options" class="grid gap-2">
                         <button onclick="showHelpForm('past_attendance')" class="w-full text-left p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-blue-500 hover:shadow-md transition-all flex items-center gap-4 group">
                             <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                <i class="fi fi-rr-calendar-clock"></i>
+                                <i class="fi fi-sr-calendar-clock"></i>
                             </div>
                             <div>
                                 <p class="text-sm font-bold text-gray-800">Presensi yang Terlewat</p>
@@ -84,7 +84,7 @@
                         </button>
                         <button onclick="showHelpForm('late_attendance')" class="w-full text-left p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-blue-500 hover:shadow-md transition-all flex items-center gap-4 group">
                             <div class="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-all">
-                                <i class="fi fi-rr-clock-three"></i>
+                                <i class="fi fi-sr-clock-three"></i>
                             </div>
                             <div>
                                 <p class="text-sm font-bold text-gray-800">Lupa/Kendala Presensi</p>
@@ -93,7 +93,7 @@
                         </button>
                         <button onclick="showHelpForm('bug_report')" class="w-full text-left p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-red-500 hover:shadow-md transition-all flex items-center gap-4 group">
                             <div class="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-all">
-                                <i class="fi fi-rr-bug"></i>
+                                <i class="fi fi-sr-bug"></i>
                             </div>
                             <div>
                                 <p class="text-sm font-bold text-gray-800">Laporkan Masalah/Bug</p>
@@ -107,7 +107,7 @@
                     <!-- Past Attendance Form -->
                     <div id="form-past_attendance" class="hidden bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
                         <h4 class="font-bold text-sm text-gray-800 flex items-center gap-2">
-                            <i class="fi fi-rr-calendar-clock text-blue-600"></i> Request Izin/Sakit
+                            <i class="fi fi-sr-calendar-clock text-blue-600"></i> Request Izin/Sakit
                         </h4>
                         <div class="space-y-3">
                             <div>
@@ -129,7 +129,7 @@
                                 <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1">Bukti (Foto)</label>
                                 <div class="mt-1 flex items-center gap-2">
                                     <button type="button" onclick="qs('#past-bukti-input').click()" class="flex-1 bg-blue-50 text-blue-600 p-3 rounded-xl border border-dashed border-blue-200 text-xs font-semibold hover:bg-blue-100 transition-all flex items-center justify-center gap-2">
-                                        <i class="fi fi-rr-camera"></i> <span id="past-bukti-text">Pilih Foto</span>
+                                        <i class="fi fi-sr-camera"></i> <span id="past-bukti-text">Pilih Foto</span>
                                     </button>
                                     <input type="file" id="past-bukti-input" class="hidden" accept="image/*" onchange="handleFileSelect(this, 'past-bukti-text', 'past-bukti-data')">
                                     <input type="hidden" id="past-bukti-data">
@@ -144,7 +144,7 @@
 
                     <div id="form-late_attendance" class="hidden bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
                         <h4 class="font-bold text-sm text-gray-800 flex items-center gap-2">
-                            <i class="fi fi-rr-clock-three text-purple-600"></i> Request Lupa Presensi
+                            <i class="fi fi-sr-clock-three text-purple-600"></i> Request Lupa Presensi
                         </h4>
                         <div class="space-y-3">
                             <div>
@@ -190,11 +190,11 @@
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="late-bukti-actions">
                                     <button onclick="startLatePresensiNow()" class="bg-indigo-600 text-white p-3 rounded-xl text-xs font-semibold hover:bg-indigo-700 transition-all flex flex-col items-center justify-center gap-1 shadow-sm">
-                                        <i class="fi fi-rr-face-viewfinder text-lg"></i>
+                                        <i class="fi fi-sr-face-viewfinder text-lg"></i>
                                         <span id="late-presick-now-label">Presensi Sekarang</span>
                                     </button>
                                     <button type="button" onclick="qs('#late-bukti-input').click()" class="bg-purple-50 text-purple-600 p-3 rounded-xl border border-dashed border-purple-200 text-xs font-semibold hover:bg-purple-100 transition-all flex flex-col items-center justify-center gap-1">
-                                        <i class="fi fi-rr-upload text-lg"></i>
+                                        <i class="fi fi-sr-upload text-lg"></i>
                                         <span id="late-bukti-text">Upload Foto</span>
                                     </button>
                                     <input type="file" id="late-bukti-input" class="hidden" accept="image/*" onchange="handleFileSelect(this, 'late-bukti-text', 'late-bukti-data')">
@@ -212,7 +212,7 @@
                     <!-- Bug Report Form -->
                     <div id="form-bug_report" class="hidden bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
                         <h4 class="font-bold text-sm text-gray-800 flex items-center gap-2">
-                            <i class="fi fi-rr-bug text-red-600"></i> Laporkan Masalah
+                            <i class="fi fi-sr-bug text-red-600"></i> Laporkan Masalah
                         </h4>
                         <div class="space-y-3">
                             <div>
@@ -223,7 +223,7 @@
                                 <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1">Bukti Foto (Opsional)</label>
                                 <div class="mt-1">
                                     <button type="button" onclick="qs('#bug-bukti-input').click()" class="w-full bg-red-50 text-red-600 p-3 rounded-xl border border-dashed border-red-200 text-xs font-semibold hover:bg-red-100 transition-all flex items-center justify-center gap-2">
-                                        <i class="fi fi-rr-camera"></i> <span id="bug-bukti-text">Lampirkan Screenshot</span>
+                                        <i class="fi fi-sr-camera"></i> <span id="bug-bukti-text">Lampirkan Screenshot</span>
                                     </button>
                                     <input type="file" id="bug-bukti-input" class="hidden" accept="image/*" onchange="handleFileSelect(this, 'bug-bukti-text', 'bug-bukti-data')">
                                     <input type="hidden" id="bug-bukti-data">
@@ -245,13 +245,13 @@
                 <div class="px-5 py-4 border-b border-gray-100 bg-white flex items-center justify-between">
                     <span class="text-sm font-bold text-gray-700">Riwayat Request Saya</span>
                     <button onclick="loadUserRequestStatus()" class="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                        <i class="fi fi-rr-refresh"></i> Refresh
+                        <i class="fi fi-sr-refresh"></i> Refresh
                     </button>
                 </div>
                 <!-- List container -->
                 <div id="status-request-list" class="p-4 space-y-3">
                     <div class="text-center text-gray-400 text-xs py-8">
-                        <i class="fi fi-rr-spinner animate-spin text-2xl mb-2 block"></i>
+                        <i class="fi fi-sr-spinner animate-spin text-2xl mb-2 block"></i>
                         Memuat data...
                     </div>
                 </div>
@@ -506,11 +506,11 @@
         async function loadUserRequestStatus() {
             const container = document.getElementById('status-request-list');
             if (!container) return;
-            container.innerHTML = '<div class="text-center text-gray-400 text-xs py-8"><i class="fi fi-rr-spinner animate-spin text-2xl mb-2 block"></i>Memuat data...</div>';
+            container.innerHTML = '<div class="text-center text-gray-400 text-xs py-8"><i class="fi fi-sr-spinner animate-spin text-2xl mb-2 block"></i>Memuat data...</div>';
             try {
                 const res = await api('?ajax=get_user_help_requests', {}, { suppressModal: true, cache: false });
                 if (!res.ok || !res.data || res.data.length === 0) {
-                    container.innerHTML = '<div class="text-center text-gray-400 text-xs py-10"><i class="fi fi-rr-inbox text-4xl mb-3 block opacity-40"></i><p class="font-semibold">Belum ada request</p><p class="mt-1 opacity-70">Request yang Anda kirim akan muncul di sini</p></div>';
+                    container.innerHTML = '<div class="text-center text-gray-400 text-xs py-10"><i class="fi fi-sr-inbox text-4xl mb-3 block opacity-40"></i><p class="font-semibold">Belum ada request</p><p class="mt-1 opacity-70">Request yang Anda kirim akan muncul di sini</p></div>';
                     return;
                 }
                 let unreviewedCount = 0;
@@ -518,19 +518,19 @@
                     const statusBadge = renderStatusBadge(r.status);
                     let typeLabel = r.request_type;
                     if (r.request_type === 'past_attendance') {
-                        if (r.jenis_izin === 'izin') typeLabel = '<i class="fi fi-rr-calendar-clock text-blue-500"></i> Request Izin';
-                        else if (r.jenis_izin === 'sakit') typeLabel = '<i class="fi fi-rr-hospital text-rose-500"></i> Request Sakit';
-                        else typeLabel = '<i class="fi fi-rr-calendar-clock text-blue-500"></i> Lupa Presensi';
+                        if (r.jenis_izin === 'izin') typeLabel = '<i class="fi fi-sr-calendar-clock text-blue-500"></i> Request Izin';
+                        else if (r.jenis_izin === 'sakit') typeLabel = '<i class="fi fi-sr-hospital text-rose-500"></i> Request Sakit';
+                        else typeLabel = '<i class="fi fi-sr-calendar-clock text-blue-500"></i> Lupa Presensi';
                     }
-                    else if (r.request_type === 'bug_report') typeLabel = '<i class="fi fi-rr-bug text-red-500"></i> Laporan Bug';
-                    else if (r.request_type === 'diff_location_checkout') typeLabel = '<i class="fi fi-rr-map-marker-cross text-rose-500"></i> Lokasi Pulang Berbeda';
+                    else if (r.request_type === 'bug_report') typeLabel = '<i class="fi fi-sr-bug text-red-500"></i> Laporan Bug';
+                    else if (r.request_type === 'diff_location_checkout') typeLabel = '<i class="fi fi-sr-map-marker-cross text-rose-500"></i> Lokasi Pulang Berbeda';
                     else if (r.request_type === 'late_attendance') {
                         // 'pulang_lebih_awal|' prefix in attendance_reason identifies auto-generated early checkout requests
                         const isPulangLebihAwal = r.attendance_reason && r.attendance_reason.startsWith('pulang_lebih_awal|');
-                        if (isPulangLebihAwal) typeLabel = '<i class="fi fi-rr-exit text-orange-500"></i> Pulang Lebih Awal';
-                        else if (r.attendance_type === 'wfa') typeLabel = '<i class="fi fi-rr-home-location text-purple-500"></i> Presensi WFA';
-                        else if (r.attendance_type === 'overtime') typeLabel = '<i class="fi fi-rr-time-add text-indigo-500"></i> Presensi Overtime';
-                        else typeLabel = '<i class="fi fi-rr-time-past text-yellow-500"></i> Presensi Manual';
+                        if (isPulangLebihAwal) typeLabel = '<i class="fi fi-sr-exit text-orange-500"></i> Pulang Lebih Awal';
+                        else if (r.attendance_type === 'wfa') typeLabel = '<i class="fi fi-sr-home-location text-purple-500"></i> Presensi WFA';
+                        else if (r.attendance_type === 'overtime') typeLabel = '<i class="fi fi-sr-time-add text-indigo-500"></i> Presensi Overtime';
+                        else typeLabel = '<i class="fi fi-sr-time-past text-yellow-500"></i> Presensi Manual';
                     }
                     const dateStr = r.tanggal ? `<span class="text-gray-400">📅 ${r.tanggal}</span>` :
                                    (r.created_at ? `<span class="text-gray-400">📅 ${r.created_at.slice(0,10)}</span>` : '');

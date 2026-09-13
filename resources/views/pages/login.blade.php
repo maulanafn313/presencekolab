@@ -5,10 +5,10 @@ if (isset($_SESSION['user'])) {
 }
 ?>
 
-<div class="min-h-screen flex w-full">
+<main class="min-h-screen flex w-full">
     <!-- Left Side - Form -->
     <div class="w-full md:w-1/2 flex items-center justify-center p-8 md:p-12 bg-white relative z-10">
-        <a href="?page=landing" class="absolute top-8 left-8 text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-2">
+        <a href="?page=landing" class="absolute top-8 left-8 text-slate-600 hover:text-slate-800 transition-colors flex items-center gap-2">
             <i class="fi fi-sr-arrow-left"></i> Kembali
         </a>
         
@@ -20,17 +20,17 @@ if (isset($_SESSION['user'])) {
 
             <form id="form-login" class="space-y-5">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                    <label for="login-email" class="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
                     <div class="relative">
                         <span class="absolute left-4 top-3.5 text-slate-400"><i class="fi fi-sr-envelope"></i></span>
-                        <input name="email" type="text" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium" placeholder="nama@email.com" required>
+                        <input id="login-email" name="email" type="email" autocomplete="username" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium" placeholder="nama@email.com" required>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                    <label for="login-password" class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
                     <div class="relative">
                         <span class="absolute left-4 top-3.5 text-slate-400"><i class="fi fi-sr-lock"></i></span>
-                        <input name="password" type="password" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium" placeholder="••••••••" required>
+                        <input id="login-password" name="password" type="password" autocomplete="current-password" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium" placeholder="••••••••" required>
                     </div>
                 </div>
                 
@@ -68,4 +68,4 @@ if (isset($_SESSION['user'])) {
              <p class="text-indigo-700/80">Kelola kehadiran Anda dengan mudah dan aman menggunakan teknologi pengenalan wajah.</p>
          </div>
     </div>
-</div>
+</main>
