@@ -25,7 +25,9 @@ $connection->table('settings')->insert([
     ['setting_key' => 'face_recognition_threshold', 'setting_value' => '0.58', 'description' => 'public'],
     ['setting_key' => 'smtp_password', 'setting_value' => 'fixture-only-secret', 'description' => 'private'],
 ]);
-$connection->statement('CREATE TABLE users (id INTEGER, role TEXT, nim TEXT, nama TEXT, email TEXT, password TEXT)');
+$connection->statement('CREATE TABLE users (id INTEGER, role TEXT, nim TEXT, nama TEXT, email TEXT, password TEXT, prodi TEXT, startup TEXT, foto_base64 TEXT, face_embedding_128 TEXT)');
+$connection->statement('CREATE TABLE intern_group_members (id INTEGER, group_id INTEGER, user_id INTEGER)');
+$connection->statement('CREATE TABLE intern_groups (id INTEGER, is_archived INTEGER)');
 
 $_SESSION = [];
 $role = $argv[2] ?? 'guest';

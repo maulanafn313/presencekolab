@@ -402,8 +402,3 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
-<?php if (empty($_SESSION['user'])): ?>
-<div role="alert" class="mx-auto my-4 max-w-3xl rounded-xl bg-amber-50 p-4 text-amber-900">
-    Silakan <a href="/login" class="font-bold underline">login</a> terlebih dahulu untuk melakukan presensi menggunakan akun Anda.
-</div>
-<?php endif; ?>

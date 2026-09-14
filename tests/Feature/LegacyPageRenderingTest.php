@@ -18,9 +18,12 @@ class LegacyPageRenderingTest extends TestCase
         }
     }
 
-    public function test_protected_legacy_read_returns_unauthorized_instead_of_database_error(): void
+    public function test_public_landing_scan_is_open_but_other_reads_stay_protected(): void
     {
-        $body = json_decode($this->request('/?ajax=get_members', 'guest', 401), true, 512, JSON_THROW_ON_ERROR);
+        $members = json_decode($this->request('/?ajax=get_members'), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertTrue($members['ok']);
+
+        $body = json_decode($this->request('/?ajax=get_rekap', 'guest', 401), true, 512, JSON_THROW_ON_ERROR);
         $this->assertFalse($body['ok']);
     }
 

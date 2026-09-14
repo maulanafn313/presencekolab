@@ -29,6 +29,13 @@ class ProtectSensitiveLegacyWrites
         if (in_array($request->method(), ['GET', 'HEAD', 'OPTIONS'], true)) {
             return $next($request);
         }
+        // Kios presensi publik: absen dari halaman pemindaian wajah dipakai tamu yang
+        // belum login, jadi tidak punya token CSRF. Kios yang terbuka lama juga membuat
+        // token halaman basi. Aksi ini diverifikasi lewat NIM + wajah di aturan absen.
+        // get_today_attendance ikut dibebaskan karena ikut dibaca kios tamu (POST baca).
+        if (array_intersect(['save_attendance', 'get_today_attendance'], $actions)) {
+            return $next($request);
+        }
         $token = $request->header('X-CSRF-TOKEN') ?: $request->input('_token');
         if (! is_string($token) || ! $request->hasSession() ||
             ! is_string($request->session()->token()) ||

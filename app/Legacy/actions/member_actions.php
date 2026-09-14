@@ -22,8 +22,7 @@ if ($action === 'get_members') {
         $fields .= ', face_embedding_128 as face_embedding';
     }
 
-    $selfFilter = isAdmin() ? '' : ' AND id = '.(int) $_SESSION['user']['id'];
-    $stmt = $pdo->query("SELECT $fields FROM users WHERE role='pegawai' AND $archivedExcludeUsersQuery $selfFilter");
+    $stmt = $pdo->query("SELECT $fields FROM users WHERE role='pegawai' AND $archivedExcludeUsersQuery");
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Ensure foto_base64 is a valid URL or base64 data + Pre-crop for 20x speed

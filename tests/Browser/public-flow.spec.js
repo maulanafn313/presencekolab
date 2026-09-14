@@ -10,8 +10,8 @@ test('guest access and logout remain protected on desktop and mobile', async ({ 
     expect(privateResponse.status()).toBe(401);
     expect(privateResponse.headers()['cache-control']).toContain('no-store');
     await page.goto('/logout');
-    const members = await page.request.get('/?ajax=get_members', { headers: { Accept: 'application/json' } });
-    expect(members.status()).toBe(401);
+    const settings = await page.request.get('/?ajax=get_settings', { headers: { Accept: 'application/json' } });
+    expect(settings.status()).toBe(200);
     expect(errors).toEqual([]);
 });
 

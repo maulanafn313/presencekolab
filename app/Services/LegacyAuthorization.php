@@ -13,7 +13,9 @@ final class LegacyAuthorization
         }
         $user = $session['user'] ?? [];
         if (empty($user['id'])) {
-            return 401;
+            // Kios presensi publik: aksi untuk memindai wajah, mengirim absen, dan
+            // melihat log hari ini tetap terbuka bagi tamu, sesuai perilaku lama.
+            return in_array($action, ['save_attendance', 'get_members', 'get_today_attendance'], true) ? 200 : 401;
         }
         if (($user['role'] ?? null) === 'admin') {
             return 200;

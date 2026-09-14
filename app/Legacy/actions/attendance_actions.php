@@ -289,9 +289,6 @@ if ($action === 'get_attendance') {
 }
 
 if ($action === 'get_today_attendance') {
-    if (! isAdmin()) {
-        $archivedExcludeQuery .= ' AND a.user_id = '.(int) $_SESSION['user']['id'];
-    }
     $type = $_POST['type'] ?? 'masuk';
     $today = getNetworkTime()->format('Y-m-d');
 

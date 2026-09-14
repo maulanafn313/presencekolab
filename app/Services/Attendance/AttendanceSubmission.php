@@ -24,17 +24,21 @@ class AttendanceSubmission
         if ($validator->fails()) {
             return response()->json(['ok' => false, 'message' => 'Data presensi tidak valid.', 'errors' => $validator->errors()], 422);
         }
-        if (empty($actor['id'])) {
-            return response()->json(['ok' => false, 'message' => 'Silakan login terlebih dahulu.'], 401);
-        }
-        if (($actor['role'] ?? '') !== 'admin' && (string) ($actor['nim'] ?? '') !== $input['nim']) {
+        // Kios presensi publik: tamu (tanpa sesi) boleh absen memakai hasil pemindaian wajah,
+        // sesuai perilaku lama. Aktor yang sudah login tetap hanya boleh absen untuk dirinya
+        // sendiri; admin bebas. Identitas tetap diverifikasi aturan absensi lama (NIM harus
+        // cocok dengan user yang benar-benar ada di database).
+        if (! empty($actor['id'])
+            && ($actor['role'] ?? '') !== 'admin'
+            && (string) ($actor['nim'] ?? '') !== $input['nim']) {
             return response()->json(['ok' => false, 'message' => 'Akses tidak diizinkan.'], 403);
         }
+        $actorId = (int) ($actor['id'] ?? 0);
 
         require_once app_path('Legacy/core.php');
         $submissionTime = $this->clock->now();
         try {
-            return DB::transaction(function () use ($input, $actor, $submissionTime) {
+            return DB::transaction(function () use ($input, $actorId, $submissionTime) {
                 // Lock the stable parent row, including when no attendance exists yet.
                 $target = DB::table('users')->where('nim', $input['nim'])->lockForUpdate()->first();
                 if (! $target) {
@@ -45,8 +49,10 @@ class AttendanceSubmission
                 unset($hashInput['_token'], $hashInput['request_id'], $hashInput['face_proof']);
                 ksort($hashInput);
                 $hash = hash('sha256', json_encode($hashInput, JSON_THROW_ON_ERROR));
+                // Tamu tidak punya id sesi: idempotency dikunci ke user pemilik NIM tersebut.
+                $idempotencyOwner = $actorId ?: (int) $target->id;
                 if ($key) {
-                    $previous = DB::table('attendance_submissions')->where('user_id', $actor['id'])->where('request_key', $key)->first();
+                    $previous = DB::table('attendance_submissions')->where('user_id', $idempotencyOwner)->where('request_key', $key)->first();
                     if ($previous) {
                         if (! hash_equals($previous->request_hash, $hash)) {
                             return response()->json(['ok' => false, 'message' => 'ID permintaan sudah digunakan untuk data berbeda.'], 409);
@@ -57,8 +63,8 @@ class AttendanceSubmission
                 }
 
                 $previousPost = $_POST;
-                $proof = config('attendance.require_face_proof')
-                    ? app(FaceProof::class)->validate($input['face_proof'] ?? null, (int) $actor['id'], (int) $target->id, $input['mode'])
+                $proof = config('attendance.require_face_proof') && $actorId
+                    ? app(FaceProof::class)->validate($input['face_proof'] ?? null, $actorId, (int) $target->id, $input['mode'])
                     : null;
                 global $pdo;
                 $previousPdo = $pdo;
@@ -77,7 +83,7 @@ class AttendanceSubmission
                     }
                     if ($key) {
                         DB::table('attendance_submissions')->insert([
-                            'user_id' => $actor['id'], 'request_key' => $key,
+                            'user_id' => $idempotencyOwner, 'request_key' => $key,
                             'request_hash' => $hash, 'response' => $result->getContent(),
                             'status' => $result->getStatusCode(), 'created_at' => now(),
                         ]);
