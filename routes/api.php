@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
+// Social Credit Ko+Lab (server-to-server, auth pakai X-Integration-Key)
+Route::get('/integration/discipline', [\App\Http\Controllers\Api\IntegrationController::class, 'discipline'])->middleware('throttle:30,1');
+
 Route::middleware(['legacy.auth', 'require.auth'])->group(function () {
     Route::get('/media/users/{name}', [\App\Http\Controllers\Api\PrivateMediaController::class, 'show']);
     // FaceNet API (Now restricted to authenticated sessions)

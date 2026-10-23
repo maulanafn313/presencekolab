@@ -42,3 +42,6 @@ __pycache__/
 /storage/framework/phpstan/
 /storage/framework/phpstan-tool.phar
 /storage/app/private/models/
+
+# Dump database lokal (berisi data pribadi), jangan pernah di-commit
+/absen_db_backup_*.sql

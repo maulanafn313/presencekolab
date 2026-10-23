@@ -28,6 +28,11 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    // Kunci untuk aplikasi Social Credit (header X-Integration-Key). Kosong = integrasi nonaktif.
+    'socialcredit' => [
+        'key' => env('INTEGRATION_API_KEY'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
