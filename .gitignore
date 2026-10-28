@@ -45,3 +45,6 @@ __pycache__/
 
 # Dump database lokal (berisi data pribadi), jangan pernah di-commit
 /absen_db_backup_*.sql
+
+# Dump database (data pribadi, jangan di-commit)
+*.sql
