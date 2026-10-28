@@ -34,8 +34,8 @@ class SensitiveRateLimitTest extends TestCase
     {
         config(['security.request_limits.recovery.per_account_ip' => 2, 'security.request_limits.face.per_ip' => 1]);
         $this->assertSame(200, $this->send('/?ajax=forgot_password', ['email' => 'a@example.test'])->getStatusCode());
-        $this->assertSame(200, $this->send('/', ['action' => 'verify_otp', 'email' => 'a@example.test'])->getStatusCode());
-        $this->assertSame(429, $this->send('/', ['ajax' => 'reset_password', 'email' => 'a@example.test'])->getStatusCode());
+        $this->assertSame(200, $this->send('/', ['action' => 'forgot_password', 'email' => 'a@example.test'])->getStatusCode());
+        $this->assertSame(429, $this->send('/', ['ajax' => 'forgot_password', 'email' => 'a@example.test'])->getStatusCode());
         $this->assertSame(200, $this->send('/api/face/identify')->getStatusCode());
         $this->assertSame(429, $this->send('/api/face/verify')->getStatusCode());
     }

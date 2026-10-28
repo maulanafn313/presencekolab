@@ -50,6 +50,7 @@ class User extends Authenticatable
         'remember_token',
         'password_reset_token',
         'password_reset_expires',
+        'pending_password',
         'face_embedding_128',
         'advanced_features',
         'facial_geometry',

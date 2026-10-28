@@ -12,7 +12,7 @@ class ThrottleSensitiveRequests
     {
         $groups = [
             'login' => 'login', 'register' => 'register',
-            'forgot_password' => 'recovery', 'verify_otp' => 'recovery', 'reset_password' => 'recovery',
+            'forgot_password' => 'recovery',
         ];
         $group = match ($request->path()) {
             'api/login' => 'login',

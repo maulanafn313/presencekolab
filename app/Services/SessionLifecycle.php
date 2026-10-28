@@ -9,7 +9,7 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 final class SessionLifecycle
 {
-    private const KEYS = ['user', 'auth_password_fingerprint', 'verified_password_reset'];
+    private const KEYS = ['user', 'auth_password_fingerprint'];
 
     public function login(Request $request, User|array $user): void
     {

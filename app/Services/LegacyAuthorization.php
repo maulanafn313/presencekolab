@@ -8,7 +8,7 @@ final class LegacyAuthorization
 {
     public static function status(PDO $pdo, array $session, string $action, array $input): int
     {
-        if (in_array($action, ['login', 'register', 'forgot_password', 'verify_otp', 'reset_password', 'get_settings', 'search_address', 'reverse_geocode', 'get_public_daily_report_stats', 'get_member_photo'], true)) {
+        if (in_array($action, ['login', 'register', 'forgot_password', 'get_settings', 'search_address', 'reverse_geocode', 'get_public_daily_report_stats', 'get_member_photo'], true)) {
             return 200;
         }
         $user = $session['user'] ?? [];
@@ -22,7 +22,7 @@ final class LegacyAuthorization
             return 403;
         }
         if (str_starts_with($action, 'admin_') || in_array($action, [
-            'save_member', 'delete_member', 'delete_attendance', 'get_ga_qr',
+            'save_member', 'delete_member', 'delete_attendance',
             'save_face_embedding', 'save_computed_face_embedding', 'generate_face_embedding',
             'save_setting', 'update_settings', 'import_db', 'fix_monthly_reports',
             'get_backup_status', 'create_backup', 'list_backup_files', 'download_backup',

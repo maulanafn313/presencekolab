@@ -12,7 +12,7 @@
                 <i class="fi fi-sr-lock text-2xl"></i>
             </div>
             <h1 class="text-2xl font-bold text-slate-800 mb-2">Lupa Password?</h1>
-            <p class="text-slate-500 text-sm">Jangan khawatir! Masukkan email Anda dan kami akan mengirimkan instruksi reset password.</p>
+            <p class="text-slate-500 text-sm">Masukkan email dan password baru Anda. Password baru aktif setelah disetujui admin.</p>
         </div>
 
         <form id="form-forgot-password" class="space-y-5">
@@ -23,8 +23,22 @@
                     <input name="email" type="email" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium" placeholder="nama@email.com" required>
                 </div>
             </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Password Baru</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-3.5 text-slate-400"><i class="fi fi-sr-lock"></i></span>
+                    <input name="password" type="password" minlength="6" maxlength="72" autocomplete="new-password" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium" placeholder="Minimal 6 karakter" required>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Konfirmasi Password Baru</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-3.5 text-slate-400"><i class="fi fi-sr-lock"></i></span>
+                    <input name="password2" type="password" minlength="6" maxlength="72" autocomplete="new-password" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium" placeholder="Ulangi password baru" required>
+                </div>
+            </div>
             <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:-translate-y-0.5">
-                Kirim Link Reset
+                Kirim Permintaan
             </button>
         </form>
 

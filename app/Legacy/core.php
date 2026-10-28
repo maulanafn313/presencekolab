@@ -673,7 +673,6 @@ require_once __DIR__.'/settings_helper.php';
 require_once __DIR__.'/backup_trigger.php';
 require_once __DIR__.'/auth_helper.php';
 require_once __DIR__.'/image_helper.php';
-require_once __DIR__.'/two_factor.php';
 require_once __DIR__.'/face_functions.php';
 require_once __DIR__.'/kpi.php';
 require_once __DIR__.'/holiday.php';

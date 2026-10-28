@@ -2,7 +2,7 @@
 
 <script src="/assets/js/modules/utilities.js"></script>
 <script>
-<?php if (in_array($page, ['login', 'register', 'forgot-password', 'verify-otp', 'reset-password'])): ?>
+<?php if (in_array($page, ['login', 'register', 'forgot-password'])): ?>
 <?php require __DIR__ . '/../partials/_scripts_auth.blade.php'; ?>
 <?php elseif ($page === 'landing'): ?>
 <?php require __DIR__ . '/../partials/_scripts_landing.blade.php'; ?>

@@ -7,7 +7,7 @@ if ($action === 'get_members') {
     $light = ($_GET['light'] ?? '0') === '1';
     $noEmbeddings = ($_GET['no_embeddings'] ?? '0') === '1';
 
-    $fields = "id, role, email, nim, nama, prodi, startup, (CASE WHEN foto_base64 IS NOT NULL AND foto_base64 != '' THEN 1 ELSE 0 END) as has_foto";
+    $fields = "id, role, email, nim, nama, prodi, startup, reset_requested_at, (CASE WHEN foto_base64 IS NOT NULL AND foto_base64 != '' THEN 1 ELSE 0 END) as has_foto";
     if (! $light) {
         $fields .= ', foto_base64';
     } else {

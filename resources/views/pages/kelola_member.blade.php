@@ -54,7 +54,6 @@
                             <th class="py-4 px-6 font-bold text-gray-800">Nama</th>
                             <th class="py-4 px-6 font-bold text-gray-800">Program Studi</th>
                             <th class="py-4 px-6 font-bold text-gray-800">Nama Startup</th>
-                            <th class="py-4 px-6 font-bold text-gray-800">QR Code GA</th>
                             <th class="py-4 px-6 font-bold text-gray-800 text-center">Aksi</th>
                         </tr>
                     </thead>

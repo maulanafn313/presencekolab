@@ -95,8 +95,7 @@ final class LegacyPageRenderer
         }
 
         if (in_array($page, [
-            'landing', 'login', 'register', 'forgot-password',
-            'verify-otp', 'reset-password', 'presensi-masuk', 'presensi-pulang',
+            'landing', 'login', 'register', 'forgot-password', 'presensi-masuk', 'presensi-pulang',
         ], true)) {
             require $this->pagesPath.'/layout_html_header.blade.php';
             require $this->pagesPath.'/'.$this->pageTemplate($page);

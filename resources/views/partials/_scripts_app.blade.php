@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pageParam = url.searchParams.get('page');
     
     // Standalone pages that are NOT part of the main SPA dashboard tabs
-    const standalonePages = ['login', 'register', 'presensi-masuk', 'presensi-pulang', 'forgot-password', 'verify-otp', 'reset-password'];
+    const standalonePages = ['login', 'register', 'presensi-masuk', 'presensi-pulang', 'forgot-password'];
     if (pageParam && standalonePages.includes(pageParam)) {
         console.log('Standalone page detected, skipping SPA routing: ' + pageParam);
         return; 
@@ -725,14 +725,14 @@ async function renderMembers(){
                 }
             </td>
             <td class="py-2 px-4">${m.nim||''}</td>
-            <td class="py-2 px-4">${m.nama||''}</td>
+            <td class="py-2 px-4">${m.nama||''}${m.reset_requested_at ? `
+                <div class="mt-1 inline-flex flex-wrap items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
+                    <i class="fi fi-sr-key"></i> Minta reset password
+                    <button class="btn-approve-reset bg-green-600 hover:bg-green-700 text-white rounded px-2 py-0.5" data-id="${m.id}" data-name="${m.nama||''}" title="Diminta ${m.reset_requested_at}">Setujui</button>
+                    <button class="btn-reject-reset bg-red-600 hover:bg-red-700 text-white rounded px-2 py-0.5" data-id="${m.id}" data-name="${m.nama||''}">Tolak</button>
+                </div>` : ''}</td>
             <td class="py-2 px-4">${m.prodi||''}</td>
             <td class="py-2 px-4">${m.startup||'-'}</td>
-            <td class="py-2 px-4 text-center">
-                <button class="btn-ga-qr bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition" data-id="${m.id}" data-email="${m.email || ''}" title="Lihat QR Code Google Authenticator">
-                    <i class="fi fi-sr-qr-code mr-1"></i>QR Code
-                </button>
-            </td>
             <td class="py-2 px-4 text-center">
                 <button class="btn-edit-member text-yellow-600 font-bold" data-id="${m.id}" data-json='${JSON.stringify(m).replace(/'/g,"&apos;")}' title="Edit"><i class="fi fi-sr-pen-square"></i></button>
                 <button class="btn-work-schedule text-green-600 font-bold ml-2" data-id="${m.id}" data-name="${m.nama}" title="Kelola Jadwal Kerja"><i class="fi fi-sr-calendar"></i></button>
@@ -829,26 +829,10 @@ btnAddMember && btnAddMember.addEventListener('click', ()=>{
 
 btnCancelModal && btnCancelModal.addEventListener('click', ()=>{ stopModalCamera(); memberModal.classList.add('hidden'); });
 
-// QR Code Modal
-const gaQrModal = qs('#ga-qr-modal');
-const btnCloseGaQr = qs('#btn-close-ga-qr');
-if(btnCloseGaQr && gaQrModal){
-    btnCloseGaQr.addEventListener('click', ()=>{
-        gaQrModal.classList.add('hidden');
-    });
-    // Close modal when clicking outside
-    gaQrModal.addEventListener('click', (e)=>{
-        if(e.target === gaQrModal){
-            gaQrModal.classList.add('hidden');
-        }
-    });
-}
-
 document.addEventListener('click', async (e)=>{
     const btnEdit = e.target.closest('.btn-edit-member');
     const btnDelete = e.target.closest('.btn-delete-member');
     const btnWorkSchedule = e.target.closest('.btn-work-schedule');
-    const btnGaQr = e.target.closest('.btn-ga-qr');
     const btnViewDr = e.target.closest('.btn-view-dr-admin');
     const btnEditAtt = e.target.closest('.btn-edit-att');
     const btnDeleteLaporan = e.target.closest('.btn-delete-laporan');
@@ -858,33 +842,6 @@ document.addEventListener('click', async (e)=>{
     const btnViewMonthDetail = e.target.closest('.btn-view-month-detail');
     const btnViewKet = e.target.closest('.btn-view-ket');
     
-    if(btnGaQr){
-        const userId = btnGaQr.getAttribute('data-id');
-        const email = btnGaQr.getAttribute('data-email');
-        const qrModal = qs('#ga-qr-modal');
-        const qrImage = qs('#ga-qr-image');
-        const qrEmail = qs('#ga-qr-email');
-        
-        qrModal.classList.remove('hidden');
-        qrEmail.textContent = 'Email: ' + email;
-        qrImage.src = '';
-        qrImage.alt = 'Loading QR Code...';
-        
-        try {
-            const r = await api('?ajax=get_ga_qr&user_id=' + userId, {});
-            if(r.ok && r.qr_url){
-                qrImage.src = r.qr_url;
-                qrImage.alt = 'QR Code Google Authenticator';
-            } else {
-                showNotif(r.message || 'Gagal memuat QR code', false);
-                qrModal.classList.add('hidden');
-            }
-        } catch(err) {
-            showNotif('Gagal memuat QR code', false);
-            qrModal.classList.add('hidden');
-        }
-    }
-
     if(btnEdit){
         const data = JSON.parse(btnEdit.getAttribute('data-json').replace(/&apos;/g, "'"));
         resetModalCamera();
@@ -902,6 +859,18 @@ document.addEventListener('click', async (e)=>{
         btnStartCamera.textContent='Ambil Ulang Foto';
         qs('#password-admin-wrapper').classList.add('hidden');
         memberModal.classList.remove('hidden');
+    }
+
+    const btnResetDecision = e.target.closest('.btn-approve-reset, .btn-reject-reset');
+    if(btnResetDecision){
+        const approve = btnResetDecision.classList.contains('btn-approve-reset');
+        const name = btnResetDecision.getAttribute('data-name');
+        showConfirmModal(approve
+            ? `Setujui password baru untuk ${name}? Pastikan permintaan ini benar dari member tersebut.`
+            : `Tolak permintaan reset password ${name}?`, async ()=>{
+            await api(`?ajax=${approve ? 'admin_approve_password_reset' : 'admin_reject_password_reset'}`, { id: btnResetDecision.getAttribute('data-id') });
+            renderMembers();
+        });
     }
 
     if(btnDelete){

@@ -132,26 +132,6 @@
     </div>
 </div>
 
-<!-- Modal QR Code Google Authenticator -->
-<div id="ga-qr-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
-    <div class="bg-white p-6 sm:p-8 rounded-lg shadow-2xl w-full max-w-md">
-        <h2 class="text-2xl font-bold mb-4">QR Code Google Authenticator</h2>
-        <div class="mb-4">
-            <p class="text-sm text-gray-600 mb-2" id="ga-qr-email"></p>
-            <p class="text-xs text-gray-500 mb-4">Scan QR code ini dengan aplikasi Google Authenticator di smartphone Anda.</p>
-            <div class="flex justify-center bg-gray-50 p-4 rounded-lg">
-                <img id="ga-qr-image" src="" alt="QR Code" class="max-w-full h-auto">
-            </div>
-            <p class="text-xs text-gray-500 mt-4 text-center">
-                Setelah memindai QR code, gunakan kode OTP dari Google Authenticator untuk reset password.
-            </p>
-        </div>
-        <div class="flex justify-end">
-            <button type="button" id="btn-close-ga-qr" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">Tutup</button>
-        </div>
-    </div>
-</div>
-
 <!-- Modal Laporan Harian Admin -->
 <div id="admin-daily-report-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
     <div class="bg-white p-6 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">

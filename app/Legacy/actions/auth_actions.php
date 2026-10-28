@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\User;
-use App\Services\PasswordResetGrant;
 use App\Services\SessionLifecycle;
 
 // Extracted from ajax_handler.php — action group: auth
@@ -100,199 +99,45 @@ if ($action === 'register' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Forgot Password - Request reset
 
+// User mengisi password baru sendiri; password baru baru aktif setelah admin menyetujui
+// (admin_approve_password_reset). Respons sama untuk email terdaftar maupun tidak.
 if ($action === 'forgot_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
-    if (empty($email)) {
-        jsonResponse(['ok' => false, 'message' => 'Email wajib diisi'], 400);
-    }
-
-    $stmt = $pdo->prepare('SELECT id, email, google_authenticator_secret FROM users WHERE email=:email LIMIT 1');
-    $stmt->execute([':email' => $email]);
-    $user = $stmt->fetch();
-
-    if (! $user) {
-        // Don't reveal if email exists for security
-        jsonResponse(['ok' => true, 'message' => 'Jika email terdaftar, link reset password telah dikirim.']);
-    }
-
-    // Check if user has Google Authenticator secret
-    if (empty($user['google_authenticator_secret'])) {
-        jsonResponse(['ok' => false, 'message' => 'Akun Anda belum memiliki Google Authenticator. Silakan hubungi administrator untuk mengatur QR code.'], 400);
-    }
-
-    // Generate reset token
-    $resetToken = bin2hex(random_bytes(32));
-    $resetExpires = date('Y-m-d H:i:s', strtotime('+1 hour'));
-
-    $stmt = $pdo->prepare('UPDATE users SET password_reset_token=:token, password_reset_expires=:expires WHERE id=:id');
-    $stmt->execute([
-        ':token' => $resetToken,
-        ':expires' => $resetExpires,
-        ':id' => $user['id'],
-    ]);
-
-    // Build reset URL for response (same as email)
-    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
-    $basePath = dirname($scriptName);
-    $basePath = rtrim($basePath, '/');
-    if ($basePath === '.') {
-        $basePath = '';
-    }
-    if (! empty($basePath) && $basePath !== '/') {
-        $basePath = '/'.ltrim($basePath, '/');
-    }
-    $resetUrl = $protocol.'://'.$host.$basePath.'/index.php?page=verify-otp&token='.urlencode($resetToken);
-
-    // Try to send email
-    $emailSent = @sendPasswordResetEmail($email, $resetToken);
-
-    // Always return success with reset URL for direct redirect
-    // Email is optional (for production, configure SMTP properly)
-    // Never log reset tokens or OTPs.
-
-    // Return success with token for direct redirect
-    jsonResponse([
-        'ok' => true,
-        'reset_url' => $resetUrl,
-        'token' => $resetToken,
-        'message' => 'Redirecting to OTP verification...',
-    ]);
-}
-
-// Verify OTP - Step 2 of forgot password
-
-if ($action === 'verify_otp' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $token = trim($_POST['token'] ?? '');
-    $otp = trim($_POST['otp'] ?? '');
-
-    if (empty($token) || empty($otp)) {
-        jsonResponse(['ok' => false, 'message' => 'Token dan OTP wajib diisi'], 400);
-    }
-
-    // Find user by reset token
-    $stmt = $pdo->prepare('SELECT id, email, google_authenticator_secret, password_reset_expires FROM users WHERE password_reset_token=:token LIMIT 1');
-    $stmt->execute([':token' => $token]);
-    $user = $stmt->fetch();
-
-    if (! $user) {
-        jsonResponse(['ok' => false, 'message' => 'Token tidak valid atau telah kedaluwarsa'], 400);
-    }
-
-    // Check if token expired
-    if (strtotime($user['password_reset_expires']) < time()) {
-        jsonResponse(['ok' => false, 'message' => 'Token telah kedaluwarsa. Silakan request reset password lagi.'], 400);
-    }
-
-    // Verify OTP with Google Authenticator
-    if (empty($user['google_authenticator_secret'])) {
-        jsonResponse(['ok' => false, 'message' => 'Akun Anda belum memiliki Google Authenticator.'], 400);
-    }
-
-    if (! verifyGoogleAuthenticatorOTP($user['google_authenticator_secret'], $otp)) {
-        jsonResponse(['ok' => false, 'message' => 'Kode OTP tidak valid. Pastikan kode dari Google Authenticator masih berlaku.'], 400);
-    }
-
-    PasswordResetGrant::issue($_SESSION, $token, (int) $user['id']);
-    // OTP verified successfully, redirect to reset password page
-    jsonResponse(['ok' => true, 'token' => $token, 'message' => 'OTP berhasil diverifikasi. Silakan buat password baru.']);
-}
-
-// Reset Password - Step 3 of forgot password
-
-if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $token = trim($_POST['token'] ?? '');
     $password = $_POST['password'] ?? '';
     $password2 = $_POST['password2'] ?? '';
-
-    if (empty($token) || empty($password) || empty($password2)) {
-        jsonResponse(['ok' => false, 'message' => 'Semua field wajib diisi'], 400);
+    if ($email === '' || $password === '' || $password2 === '') {
+        jsonResponse(['ok' => false, 'message' => 'Email dan password baru wajib diisi'], 400);
     }
-
     if ($password !== $password2) {
         jsonResponse(['ok' => false, 'message' => 'Konfirmasi password tidak cocok'], 400);
     }
-
-    // Find user by reset token
-    $stmt = $pdo->prepare('SELECT id, password_reset_expires FROM users WHERE password_reset_token=:token LIMIT 1');
-    $stmt->execute([':token' => $token]);
-    $user = $stmt->fetch();
-
-    if (! $user) {
-        jsonResponse(['ok' => false, 'message' => 'Token tidak valid atau telah kedaluwarsa'], 400);
+    if (strlen($password) < 6 || strlen($password) > 72) {
+        jsonResponse(['ok' => false, 'message' => 'Password harus terdiri dari 6–72 karakter.'], 422);
     }
 
-    // Check if token expired
-    if (strtotime($user['password_reset_expires']) < time()) {
-        jsonResponse(['ok' => false, 'message' => 'Token telah kedaluwarsa. Silakan request reset password lagi.'], 400);
-    }
+    $stmt = $pdo->prepare('UPDATE users SET pending_password=:hash, reset_requested_at=NOW() WHERE email=:email');
+    $stmt->execute([':hash' => password_hash($password, PASSWORD_BCRYPT), ':email' => $email]);
 
-    if (! PasswordResetGrant::allows($_SESSION, $token, (int) $user['id'])) {
-        jsonResponse(['ok' => false, 'message' => 'Verifikasi OTP diperlukan sebelum mengganti password.'], 403);
-    }
-    if (strlen($password) < 12 || strlen($password) > 72) {
-        jsonResponse(['ok' => false, 'message' => 'Password harus terdiri dari 12–72 karakter.'], 422);
-    }
-    unset($_SESSION['verified_password_reset']);
-    // Update password
-    $hash = password_hash($password, PASSWORD_BCRYPT);
-    $stmt = $pdo->prepare('UPDATE users SET password=:hash, password_reset_token=NULL, password_reset_expires=NULL WHERE id=:id AND password_reset_token=:token');
-    $stmt->execute([
-        ':hash' => $hash,
-        ':token' => $token,
-        ':id' => $user['id'],
-    ]);
-    if ($stmt->rowCount() !== 1) {
-        jsonResponse(['ok' => false, 'message' => 'Token sudah digunakan.'], 400);
-    }
-    $pdo->prepare('DELETE FROM personal_access_tokens WHERE tokenable_type = ? AND tokenable_id = ?')
-        ->execute([User::class, $user['id']]);
-
-    jsonResponse(['ok' => true, 'message' => 'Password berhasil direset. Silakan login dengan password baru.']);
+    jsonResponse(['ok' => true, 'message' => 'Jika email terdaftar, permintaan ganti password sudah dikirim. Password baru aktif setelah disetujui admin.']);
 }
 
-// Get Google Authenticator QR Code for member
-
-if ($action === 'get_ga_qr') {
+if (in_array($action, ['admin_approve_password_reset', 'admin_reject_password_reset'], true) && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (! isAdmin()) {
         jsonResponse(['error' => 'Forbidden'], 403);
     }
-
-    $userId = (int) ($_GET['user_id'] ?? 0);
-    if (! $userId) {
-        jsonResponse(['ok' => false, 'message' => 'User ID tidak valid'], 400);
-    }
-
-    $stmt = $pdo->prepare('SELECT id, email, google_authenticator_secret FROM users WHERE id=:id LIMIT 1');
-    $stmt->execute([':id' => $userId]);
-    $user = $stmt->fetch();
-
-    if (! $user) {
-        jsonResponse(['ok' => false, 'message' => 'User tidak ditemukan'], 404);
-    }
-
-    // Generate secret if doesn't exist
-    if (empty($user['google_authenticator_secret'])) {
-        $secret = generateGoogleAuthenticatorSecret();
-        if (! $secret) {
-            jsonResponse(['ok' => false, 'message' => 'Gagal menghasilkan secret. Pastikan Google Authenticator library terpasang.'], 500);
+    $id = (int) ($_POST['id'] ?? 0);
+    if ($action === 'admin_approve_password_reset') {
+        $stmt = $pdo->prepare('UPDATE users SET password=pending_password, pending_password=NULL, reset_requested_at=NULL WHERE id=:id AND pending_password IS NOT NULL');
+        $stmt->execute([':id' => $id]);
+        if ($stmt->rowCount() !== 1) {
+            jsonResponse(['ok' => false, 'message' => 'Tidak ada permintaan reset password untuk member ini.'], 404);
         }
-
-        $stmt = $pdo->prepare('UPDATE users SET google_authenticator_secret=:secret WHERE id=:id');
-        $stmt->execute([':secret' => $secret, ':id' => $userId]);
-    } else {
-        $secret = $user['google_authenticator_secret'];
+        $pdo->prepare('DELETE FROM personal_access_tokens WHERE tokenable_type = ? AND tokenable_id = ?')
+            ->execute([User::class, $id]);
+        jsonResponse(['ok' => true, 'message' => 'Password baru member sudah aktif.']);
     }
-
-    // Generate QR code URL
-    $qrUrl = getGoogleAuthenticatorQRCode($secret, $user['email'], 'Sistem Presensi');
-
-    if (! $qrUrl) {
-        jsonResponse(['ok' => false, 'message' => 'Gagal menghasilkan QR code.'], 500);
-    }
-
-    jsonResponse(['ok' => true, 'qr_url' => $qrUrl, 'secret' => $secret, 'email' => $user['email']]);
+    $pdo->prepare('UPDATE users SET pending_password=NULL, reset_requested_at=NULL WHERE id=:id')->execute([':id' => $id]);
+    jsonResponse(['ok' => true, 'message' => 'Permintaan reset password ditolak.']);
 }
 
 if ($action === 'logout') {
