@@ -512,12 +512,12 @@ if ($action === 'admin_add_absence' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $status = 'ontime';
 
         if (in_array($type, ['wfo', 'wfa', 'overtime'])) {
-            // If times are missing, use default 08:00 - 17:00
+            // If times are missing, use the default hours of that day
             if (! $jam_masuk) {
-                $jam_masuk = '08:00';
+                $jam_masuk = \App\Services\Attendance\WorkHours::defaultStart($date);
             }
             if (! $jam_pulang) {
-                $jam_pulang = '17:00';
+                $jam_pulang = \App\Services\Attendance\WorkHours::defaultEnd($date);
             }
 
             $jam_masuk_iso = $date.' '.$jam_masuk.':00';
@@ -785,6 +785,41 @@ if ($action === 'admin_update_attendance' && $_SERVER['REQUEST_METHOD'] === 'POS
     jsonResponse(['ok' => true]);
 }
 
+// Admin: daftar mahasiswa untuk pesan pengingat grup WhatsApp
+
+if ($action === 'admin_get_attendance_reminder') {
+    if (! isAdmin()) {
+        jsonResponse(['error' => 'Forbidden'], 403);
+    }
+    jsonResponse(['ok' => true, 'data' => \App\Services\AttendanceReminder::build($pdo, date('Y-m-d'), $archivedExcludeUsersQuery)]);
+}
+
+// Admin: ubah status masuk / keterangan banyak baris sekaligus
+
+if ($action === 'admin_bulk_update_attendance' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (! isAdmin()) {
+        jsonResponse(['error' => 'Forbidden'], 403);
+    }
+    $ids = \App\Services\AttendanceBulkUpdate::parseIds((string) ($_POST['ids'] ?? ''));
+    $status = trim((string) ($_POST['status'] ?? '')) ?: null;
+    $ket = trim((string) ($_POST['ket'] ?? '')) ?: null;
+    if ($ids === null) {
+        jsonResponse(['ok' => false, 'message' => 'Daftar presensi tidak valid'], 400);
+    }
+    if (! \App\Services\AttendanceBulkUpdate::isValidChange($status, $ket)) {
+        jsonResponse(['ok' => false, 'message' => 'Pilih status masuk atau keterangan yang valid'], 400);
+    }
+    $result = \App\Services\AttendanceBulkUpdate::apply($pdo, $ids, $status, $ket);
+    foreach ($result['touched'] as [$touchedUserId, $touchedDate]) {
+        clearKpiCache($pdo, $touchedUserId, $touchedDate);
+    }
+    if ($result['changed'] > 0) {
+        \App\Services\AdminActivity::record($pdo, $action, "Ubah massal {$result['changed']} data presensi", \App\Services\AdminActivity::safeDetail(['status' => $status, 'ket' => $ket]), $result['undo'], $_SESSION);
+        triggerDatabaseBackup();
+    }
+    jsonResponse(['ok' => true, 'changed' => $result['changed'], 'skipped' => $result['skipped']]);
+}
+
 // Admin: update WFA location data to use readable addresses
 
 if ($action === 'admin_bulk_fix_empty_checkout') {
@@ -805,8 +840,8 @@ if ($action === 'admin_bulk_fix_empty_checkout') {
     // Update ALL records with missing clock-outs
     // We use a CASE or CONCAT to ensure jam_pulang_iso matches the original date of attendance
     $stmt = $pdo->prepare("UPDATE attendance 
-                              SET jam_pulang = :time, 
-                                  jam_pulang_iso = CONCAT(DATE(jam_masuk_iso), ' ', :time2)
+                              SET jam_pulang = IF(".\App\Services\Attendance\WorkHours::fridaySql('jam_masuk_iso').", '".\App\Services\Attendance\WorkHours::FRIDAY_END."', :time), 
+                                  jam_pulang_iso = CONCAT(DATE(jam_masuk_iso), ' ', IF(".\App\Services\Attendance\WorkHours::fridaySql('jam_masuk_iso').", '".\App\Services\Attendance\WorkHours::FRIDAY_END.":00', :time2))
                               WHERE (jam_pulang IS NULL OR jam_pulang = '' OR jam_pulang = '-') 
                               AND ket IN ('wfo', 'wfa', 'overtime')");
 

@@ -22,6 +22,12 @@ if ($action === 'get_members') {
         $fields .= ', face_embedding_128 as face_embedding';
     }
 
+    if (isAdmin()) {
+        // Data untuk filter Kelola Member.
+        $fields .= ", (CASE WHEN face_embedding_128 IS NOT NULL AND face_embedding_128 != '' THEN 1 ELSE 0 END) as has_face";
+        $fields .= ", (SELECT GROUP_CONCAT(ig.nama ORDER BY ig.nama SEPARATOR '||') FROM intern_group_members igm JOIN intern_groups ig ON ig.id = igm.group_id WHERE igm.user_id = users.id AND ig.is_archived = 0) as kelompok";
+    }
+
     $selfFilter = isAdmin() ? '' : ' AND id = '.(int) $_SESSION['user']['id'];
     $stmt = $pdo->query("SELECT $fields FROM users WHERE role='pegawai' AND $archivedExcludeUsersQuery $selfFilter");
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -147,6 +153,16 @@ if ($action === 'save_member' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $prodi = trim($_POST['prodi'] ?? '');
         $startup = trim($_POST['startup'] ?? '');
         $foto = $_POST['foto'] ?? null;
+
+        $currentStartup = null;
+        if ($id) {
+            $startupStmt = $pdo->prepare('SELECT startup FROM users WHERE id=:id');
+            $startupStmt->execute([':id' => $id]);
+            $currentStartup = $startupStmt->fetchColumn() ?: null;
+        }
+        if (! \App\Services\StartupDirectory::isAllowed($pdo, $startup, $currentStartup)) {
+            jsonResponse(['ok' => false, 'message' => 'Pilih startup dari daftar Kelola Startup'], 400);
+        }
 
         if ($id) {
             // Update existing by id

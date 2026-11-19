@@ -40,7 +40,7 @@ document.addEventListener('click', (e) => {
         }
     }
 });
-const pages = { rekap: qs('#page-rekap'), 'laporan-bulanan': qs('#page-laporan-bulanan'), members: qs('#page-members'), laporan: qs('#page-laporan'), 'admin-monthly': qs('#page-admin-monthly'), dashboard: qs('#page-dashboard'), settings: qs('#page-settings'), 'help-requests': qs('#tab-help-requests'), 'qa-panel': qs('#page-qa-panel') };
+const pages = { rekap: qs('#page-rekap'), 'laporan-bulanan': qs('#page-laporan-bulanan'), members: qs('#page-members'), startups: qs('#page-startups'), laporan: qs('#page-laporan'), calendar: qs('#page-calendar'), 'review-laporan': qs('#page-review-laporan'), insight: qs('#page-insight'), activity: qs('#page-activity'), 'admin-monthly': qs('#page-admin-monthly'), dashboard: qs('#page-dashboard'), settings: qs('#page-settings'), 'help-requests': qs('#tab-help-requests'), 'qa-panel': qs('#page-qa-panel') };
 qsa('.tab-link').forEach(btn=>{
     btn.addEventListener('click', ()=> {
         showPage(btn.dataset.tab);
@@ -152,11 +152,16 @@ function showPage(name, pushState = true){
     }
     
     if(name==='members') renderMembers(); 
-    if(name==='laporan') { loadStartupOptions(); renderLaporan(); } 
+    if(name==='startups') window.renderStartupPage();
+    if(name==='insight') window.renderPeriodInsight();
+    if(name==='activity') window.renderActivityPage();
+    if(name==='calendar') window.renderAttendanceCalendar();
+    if(name==='laporan') { loadStartupOptions(); renderLaporan(); }
+    if(name==='review-laporan') window.renderReportReview();
     if(name==='rekap' && !isAlreadyActive) initRekapPage(); 
     if(name==='laporan-bulanan') renderMonthly(); 
     if(name==='admin-monthly') renderAdminMonthly(); 
-    if(name==='dashboard') renderDashboard(); 
+    if(name==='dashboard') { renderDashboard(); window.renderActionCenter?.(); }
     if(name==='help-requests') loadAllHelpRequests();
     if(name==='settings' && !isAlreadyActive) { renderSettings(); initAddressSearch(); if(typeof loadBackupFiles === 'function') loadBackupFiles(); } 
     if(name==='qa-panel' && typeof window.qaInitOnShow === 'function') window.qaInitOnShow();
@@ -707,11 +712,61 @@ async function processPresensiRecognition(nim) {
 // The logged-in app focuses on admin/employee dashboard functionality
 
 // Members (Admin)
+const MEMBER_NO_GROUP = '__none__';
+const memberStartupKey = (name) => String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const memberGroups = (m) => (m.kelompok ? String(m.kelompok).split('||') : []);
+let memberRenderSeq = 0;
+
+function fillMemberFilter(select, entries) {
+    if (!select) return;
+    const selected = select.value;
+    select.length = 1;
+    entries.forEach(([value, label]) => select.add(new Option(label, value)));
+    select.value = entries.some(([value]) => value === selected) ? selected : '';
+}
+
+function fillMemberFilters(members) {
+    const sorted = (map) => [...map].sort((a, b) => a[1].localeCompare(b[1], 'id'));
+    const startups = new Map(), prodi = new Map(), groups = new Map();
+    members.forEach((m) => {
+        const key = memberStartupKey(m.startup);
+        if (key && !startups.has(key)) startups.set(key, String(m.startup).trim());
+        if ((m.prodi || '').trim()) prodi.set(m.prodi, m.prodi);
+        memberGroups(m).forEach((name) => groups.set(name, name));
+    });
+    fillMemberFilter(qs('#member-filter-startup'), sorted(startups));
+    fillMemberFilter(qs('#member-filter-prodi'), sorted(prodi));
+    fillMemberFilter(qs('#member-filter-group'), [...sorted(groups), [MEMBER_NO_GROUP, 'Tanpa Kelompok']]);
+}
+
+function memberMatchesFilters(m) {
+    const term = (qs('#search-member')?.value || '').trim().toLowerCase();
+    const startup = qs('#member-filter-startup')?.value || '';
+    const prodi = qs('#member-filter-prodi')?.value || '';
+    const group = qs('#member-filter-group')?.value || '';
+    const status = qs('#member-filter-status')?.value || '';
+    const statusMatch = {
+        reset: !!m.reset_requested_at,
+        'no-photo': !Number(m.has_foto),
+        'no-face': !Number(m.has_face),
+        'no-startup': !memberStartupKey(m.startup),
+    };
+    return ((m.nama || '').toLowerCase().includes(term) || (m.nim || '').toLowerCase().includes(term))
+        && (!startup || memberStartupKey(m.startup) === startup)
+        && (!prodi || m.prodi === prodi)
+        && (!group || (group === MEMBER_NO_GROUP ? memberGroups(m).length === 0 : memberGroups(m).includes(group)))
+        && (!status || statusMatch[status]);
+}
+
 async function renderMembers(){
+    const seq = ++memberRenderSeq;
     const j = await api('?ajax=get_members&light=1&no_embeddings=1', {}, { suppressModal: true, cache: true });
+    if (seq !== memberRenderSeq) return; // Hasil lama tidak boleh menimpa filter terbaru.
     const members = (j.data||[]);
-    const term = (qs('#search-member')?.value||'').toLowerCase();
-    const filtered = members.filter(m=> (m.nama||'').toLowerCase().includes(term) || (m.nim||'').toLowerCase().includes(term));
+    fillMemberFilters(members);
+    const filtered = members.filter(memberMatchesFilters);
+    const countEl = qs('#member-filter-count');
+    if (countEl) countEl.textContent = `Menampilkan ${filtered.length} dari ${members.length} member`;
     
     renderPaginatedTable('table-members-body', filtered, (m) => {
         const tr = document.createElement('tr'); tr.className='border-b hover:bg-gray-50';
@@ -748,14 +803,21 @@ async function renderMembers(){
         return tr;
     }, {
         colSpan: 7,
-        emptyMessage: 'Tidak ada data member.',
+        emptyMessage: members.length ? 'Tidak ada member yang cocok dengan filter.' : 'Tidak ada data member.',
         onPageChange: renderMembers
     });
 }
 
 // End of member photo setup
 
-qs('#search-member') && qs('#search-member').addEventListener('input', () => { resetTablePage('table-members-body'); renderMembers(); });
+['#search-member', '#member-filter-startup', '#member-filter-prodi', '#member-filter-group', '#member-filter-status'].forEach((selector) => {
+    qs(selector)?.addEventListener('input', () => { resetTablePage('table-members-body'); renderMembers(); });
+});
+qs('#member-filter-reset')?.addEventListener('click', () => {
+    ['#search-member', '#member-filter-startup', '#member-filter-prodi', '#member-filter-group', '#member-filter-status'].forEach((selector) => { qs(selector).value = ''; });
+    resetTablePage('table-members-body');
+    renderMembers();
+});
 
 const memberModal = qs('#member-modal');
 const btnAddMember = qs('#btn-add-member');
@@ -824,7 +886,7 @@ photoFileInput && photoFileInput.addEventListener('change', (e)=>{
 });
 
 btnAddMember && btnAddMember.addEventListener('click', ()=>{
-    memberForm.reset(); qs('#modal-title').textContent='Tambah Member Baru'; qs('#member-id').value=''; qs('#nim').readOnly=false; resetModalCamera(); btnStartCamera.textContent='Buka Kamera untuk Foto'; memberModal.classList.remove('hidden'); qs('#password-admin-wrapper').classList.remove('hidden');
+    memberForm.reset(); qs('#modal-title').textContent='Tambah Member Baru'; qs('#member-id').value=''; qs('#nim').readOnly=false; resetModalCamera(); btnStartCamera.textContent='Buka Kamera untuk Foto'; memberModal.classList.remove('hidden'); qs('#password-admin-wrapper').classList.remove('hidden'); fillMemberStartups();
 });
 
 btnCancelModal && btnCancelModal.addEventListener('click', ()=>{ stopModalCamera(); memberModal.classList.add('hidden'); });
@@ -853,7 +915,7 @@ document.addEventListener('click', async (e)=>{
         qs('#nim').readOnly = true;
         qs('#nama').value = data.nama || '';
         qs('#prodi').value = data.prodi || '';
-        qs('#startup').value = data.startup || '';
+        fillMemberStartups(data.startup || '');
         fotoPreview.src = data.foto_base64 || '';
         if(data.foto_base64) fotoPreview.classList.remove('hidden');
         btnStartCamera.textContent='Ambil Ulang Foto';
@@ -1521,6 +1583,20 @@ memberForm && memberForm.addEventListener('submit', async (e)=>{
     }
 });
 
+// Pilihan startup di form member. Nilai lama tetap tampil agar tidak hilang saat data lain diedit.
+async function fillMemberStartups(current = '') {
+    const select = qs('#startup');
+    if (!select) return;
+    select.length = 1;
+    if (current) select.add(new Option(current, current));
+    select.value = current;
+    const r = await api('?ajax=admin_get_startups', {}, { method: 'GET', suppressModal: true }).catch(() => null);
+    const names = (r?.data?.startups || []).filter((s) => s.is_active).map((s) => s.name);
+    select.length = 1;
+    [...new Set([...names, ...(current ? [current] : [])])].forEach((name) => select.add(new Option(name, name)));
+    select.value = current;
+}
+
 // Load startup options for filter
 async function loadStartupOptions() {
     const filterStartup = qs('#filter-startup');
@@ -1540,9 +1616,83 @@ async function loadStartupOptions() {
 
 // SPBW_SYSTEM_FIX_MARKER: POLICY_SYNC_V3 
 // Laporan
+// Pilihan aksi massal selalu dibatasi pada baris yang lolos filter saat ini.
+const attBulk = { selected: new Set(), rows: [] };
+
+function syncAttBulk() {
+    const count = attBulk.selected.size, total = attBulk.rows.length;
+    const all = qs('#att-bulk-all');
+    if (all) {
+        all.checked = total > 0 && count === total;
+        all.indeterminate = count > 0 && count < total;
+    }
+    qs('#att-bulk-bar')?.classList.toggle('hidden', count === 0);
+    if (qs('#att-bulk-count')) qs('#att-bulk-count').textContent = `${count} dari ${total} data dipilih`;
+    const leave = ['izin', 'sakit'].includes(qs('#att-bulk-ket')?.value);
+    if (qs('#att-bulk-status')) {
+        if (leave) qs('#att-bulk-status').value = '';
+        qs('#att-bulk-status').disabled = leave;
+    }
+    if (qs('#att-bulk-apply')) qs('#att-bulk-apply').disabled = !(qs('#att-bulk-status')?.value || qs('#att-bulk-ket')?.value);
+}
+
+function setAttBulkRows(rows) {
+    attBulk.rows = rows;
+    const visible = new Set(rows.map((a) => String(a.id)));
+    attBulk.selected.forEach((id) => { if (!visible.has(id)) attBulk.selected.delete(id); });
+    syncAttBulk();
+}
+
+function resetAttBulk() {
+    attBulk.selected.clear();
+    qs('#att-bulk-status').value = '';
+    qs('#att-bulk-ket').value = '';
+    qsa('.att-bulk-check').forEach((c) => { c.checked = false; });
+    syncAttBulk();
+}
+
+qs('#table-laporan-body')?.addEventListener('change', (e) => {
+    if (!e.target.classList.contains('att-bulk-check')) return;
+    attBulk.selected[e.target.checked ? 'add' : 'delete'](e.target.value);
+    syncAttBulk();
+});
+qs('#att-bulk-all')?.addEventListener('change', (e) => {
+    attBulk.selected = new Set(e.target.checked ? attBulk.rows.map((a) => String(a.id)) : []);
+    qsa('.att-bulk-check').forEach((c) => { c.checked = e.target.checked; });
+    syncAttBulk();
+});
+qs('#att-bulk-status')?.addEventListener('change', syncAttBulk);
+qs('#att-bulk-ket')?.addEventListener('change', syncAttBulk);
+qs('#att-bulk-clear')?.addEventListener('click', resetAttBulk);
+qs('#att-bulk-apply')?.addEventListener('click', () => {
+    const status = qs('#att-bulk-status').value, ket = qs('#att-bulk-ket').value;
+    const rows = attBulk.rows.filter((a) => attBulk.selected.has(String(a.id)));
+    const leave = ['izin', 'sakit'].includes(ket);
+    const present = rows.filter((a) => !a.is_note).length, notes = rows.length - present;
+    const message = [`Terapkan perubahan ke ${rows.length} data presensi?`];
+    if (leave && present) message.push(`PERHATIAN: jam masuk, jam pulang, dan foto bukti pada ${present} data akan dihapus permanen karena berubah menjadi izin/sakit.`);
+    if (ket && !leave && notes) message.push(`${notes} data izin/sakit akan menjadi hadir dengan jam 08:00-17:00 (Jumat sejak 7 Juli 2026: 07:30-16:30).`);
+    if (!ket && notes) message.push(`${notes} data izin/sakit dilewati karena tidak memiliki status masuk.`);
+    showConfirmModal(message.join(' '), async () => {
+        const btn = qs('#att-bulk-apply');
+        btn.disabled = true;
+        const r = await api('?ajax=admin_bulk_update_attendance', { ids: [...attBulk.selected].join(','), status, ket });
+        if (!r.ok) {
+            showNotif(r.message || 'Gagal memperbarui data presensi', false);
+            syncAttBulk();
+            return;
+        }
+        showNotif(`${r.changed} data diperbarui${r.skipped ? `, ${r.skipped} dilewati karena tidak berubah` : ''}.`, true);
+        resetAttBulk();
+        renderLaporan();
+    });
+});
+
 async function renderLaporan(){
     const tglMulai = qs('#filter-tanggal-mulai')?.value || '';
     const tglSelesai = qs('#filter-tanggal-selesai')?.value || '';
+    // Rentang tanggal selalu mengalahkan mode "Hari Ini".
+    if (tglMulai || tglSelesai) setLaporanTodayMode(false);
     let url = '?ajax=get_attendance&limit=1000';
     if (tglMulai) url += '&start_date=' + tglMulai;
     if (tglSelesai) url += '&end_date=' + tglSelesai;
@@ -1623,6 +1773,8 @@ async function renderLaporan(){
         }
     });
     
+    setAttBulkRows(filtered);
+
         renderPaginatedTable('table-laporan-body', filtered, (att) => {
         const d = new Date(att.jam_masuk_iso);
         const tanggal = isNaN(d.getTime()) ? '-' : d.toLocaleDateString('id-ID', { year:'numeric', month:'long', day:'numeric'});
@@ -1742,6 +1894,7 @@ async function renderLaporan(){
         }
 
         tr.innerHTML = `
+            <td class="py-2 pl-4 pr-2"><input type="checkbox" class="att-bulk-check w-4 h-4 rounded border-gray-300 text-indigo-600 cursor-pointer" value="${att.id}"></td>
             <td class="py-2 px-4">${tanggal}</td>
             <td class="py-2 px-4">${att.nim||''}</td>
             <td class="py-2 px-4">${att.nama||''}</td>
@@ -1758,6 +1911,9 @@ async function renderLaporan(){
                 <button title="Edit" class="btn-edit-att text-yellow-600 font-bold ml-1" data-json='${JSON.stringify(att).replace(/'/g,"&apos;")} '><i class="fi fi-sr-pen-square"></i></button>
                 <button title="Hapus" class="btn-delete-laporan text-red-600 font-bold ml-1" data-id="${att.id}"><i class="fi fi-ss-trash"></i></button>
             </td>`;
+        const bulkCheck = tr.querySelector('.att-bulk-check');
+        bulkCheck.checked = attBulk.selected.has(String(att.id));
+        bulkCheck.setAttribute('aria-label', `Pilih ${att.nama || ''} ${tanggal}`);
 
         if (att.landmark_masuk) {
             setTimeout(() => {
@@ -1779,7 +1935,7 @@ async function renderLaporan(){
         }
         return tr;
     }, {
-        colSpan: 12,
+        colSpan: 13,
         emptyMessage: 'Tidak ada data kehadiran.',
         onPageChange: renderLaporan
     });
@@ -1787,28 +1943,50 @@ async function renderLaporan(){
 
 [qs('#search-laporan'), qs('#filter-startup'), qs('#filter-tanggal-mulai'), qs('#filter-tanggal-selesai'), qs('#sort-presensi'), qs('#filter-status'), qs('#filter-ket'), qs('#filter-laporan')].forEach(el=>{ if(el) el.addEventListener('input', () => { resetTablePage('table-laporan-body'); renderLaporan(); }); });
 
+function setLaporanTodayMode(todayOnly) {
+    const btn = qs('#btn-toggle-today');
+    if (!btn || btn.textContent.includes('Hari Ini') === todayOnly) return;
+    btn.textContent = todayOnly ? '📅 Hari Ini' : '📊 Lihat Semua';
+    btn.classList.toggle('bg-indigo-500', todayOnly);
+    btn.classList.toggle('hover:bg-indigo-600', todayOnly);
+    btn.classList.toggle('bg-purple-500', !todayOnly);
+    btn.classList.toggle('hover:bg-purple-600', !todayOnly);
+}
+
 // NEW: Toggle today/all button
 qs('#btn-toggle-today') && qs('#btn-toggle-today').addEventListener('click', function() {
-    const btn = this;
-    if (btn.textContent.includes('Hari Ini')) {
-        btn.textContent = '📊 Lihat Semua';
-        btn.classList.remove('bg-indigo-500', 'hover:bg-indigo-600');
-        btn.classList.add('bg-purple-500', 'hover:bg-purple-600');
-    } else {
-        btn.textContent = '📅 Hari Ini';
-        btn.classList.remove('bg-purple-500', 'hover:bg-purple-600');
-        btn.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
+    const toToday = !this.textContent.includes('Hari Ini');
+    if (toToday) {
+        qs('#filter-tanggal-mulai').value = '';
+        qs('#filter-tanggal-selesai').value = '';
     }
+    setLaporanTodayMode(toToday);
+    resetTablePage('table-laporan-body');
     renderLaporan();
 });
 
+// Senin-Minggu relatif terhadap minggu berjalan (0 = minggu ini, -1 = minggu lalu).
+function setLaporanWeek(weekOffset) {
+    const toIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const monday = new Date();
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7) + weekOffset * 7);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    qs('#filter-tanggal-mulai').value = toIso(monday);
+    qs('#filter-tanggal-selesai').value = toIso(sunday);
+    resetTablePage('table-laporan-body');
+    renderLaporan();
+}
+qs('#btn-week-this') && qs('#btn-week-this').addEventListener('click', () => setLaporanWeek(0));
+qs('#btn-week-last') && qs('#btn-week-last').addEventListener('click', () => setLaporanWeek(-1));
 
 qs('#btn-show-all') && qs('#btn-show-all').addEventListener('click', ()=>{
-    if(qs('#search-laporan')) qs('#search-laporan').value = '';
-    if(qs('#filter-startup')) qs('#filter-startup').value = '';
-    if(qs('#filter-tanggal-mulai')) qs('#filter-tanggal-mulai').value = '';
-    if(qs('#filter-tanggal-selesai')) qs('#filter-tanggal-selesai').value = '';
+    ['#search-laporan', '#filter-startup', '#filter-tanggal-mulai', '#filter-tanggal-selesai', '#filter-status', '#filter-ket', '#filter-laporan'].forEach(sel => {
+        if (qs(sel)) qs(sel).value = '';
+    });
     if(qs('#sort-presensi')) qs('#sort-presensi').value = 'tanggal-desc';
+    setLaporanTodayMode(false);
+    resetTablePage('table-laporan-body');
     renderLaporan();
 });
 

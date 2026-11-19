@@ -99,7 +99,7 @@ function calculateKPIForEmployeeRaw(
                             GREATEST(0, 
                                 FLOOR(
                                     TIMESTAMPDIFF(MINUTE, 
-                                        CONCAT('2000-01-01 ', :max_ontime_hour1, ':00'),
+                                        CONCAT('2000-01-01 ', IF(".\App\Services\Attendance\WorkHours::fridaySql('jam_masuk_iso').", '".\App\Services\Attendance\WorkHours::FRIDAY_START."', :max_ontime_hour1), ':00'),
                                         CONCAT('2000-01-01 ', 
                                             CASE 
                                                 WHEN LENGTH(jam_masuk) = 5 THEN CONCAT(jam_masuk, ':00')
@@ -111,7 +111,7 @@ function calculateKPIForEmployeeRaw(
                             )
                         WHEN status = 'terlambat' AND jam_masuk IS NULL THEN 
                             GREATEST(0, TIMESTAMPDIFF(MINUTE, 
-                                CONCAT(DATE(jam_masuk_iso), ' ', :max_ontime_hour2, ':00'), 
+                                CONCAT(DATE(jam_masuk_iso), ' ', IF(".\App\Services\Attendance\WorkHours::fridaySql('jam_masuk_iso').", '".\App\Services\Attendance\WorkHours::FRIDAY_START."', :max_ontime_hour2), ':00'), 
                                 jam_masuk_iso
                             ))
                         ELSE 0 

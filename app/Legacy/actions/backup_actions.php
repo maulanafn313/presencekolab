@@ -350,6 +350,15 @@ if ($action === 'import_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $importSuccess = true;
         }
 
+        // File import bisa lebih lama dari kode aplikasi, jadi tabel dan kolom terbaru dibuat ulang.
+        $migrationWarning = '';
+        try {
+            \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        } catch (Throwable $migrationError) {
+            error_log('Migration after import failed: '.$migrationError->getMessage());
+            $migrationWarning = ' Namun struktur database belum diperbarui. Jalankan php artisan migrate di server.';
+        }
+
         // 5. RESTORE ADMINS
         // Ensure users table exists after import
         if (Schema::hasTable('users')) {
@@ -382,7 +391,7 @@ if ($action === 'import_db' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             triggerDatabaseBackup();
         }
 
-        jsonResponse(['ok' => true, 'message' => 'Database berhasil direstore. '.($importSuccess ? 'Metode cepat berhasil.' : 'Metode alternatif selesai.')]);
+        jsonResponse(['ok' => true, 'message' => 'Database berhasil direstore. '.($importSuccess ? 'Metode cepat berhasil.' : 'Metode alternatif selesai.').$migrationWarning]);
     } catch (Exception $e) {
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         error_log('Import DB Error: '.$e->getMessage());

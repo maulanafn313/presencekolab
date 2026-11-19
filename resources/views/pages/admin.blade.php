@@ -9,6 +9,7 @@
 
         <!-- Main Content -->
         <main class="flex-1 overflow-y-auto w-full px-4 lg:px-8 py-8 custom-scrollbar">
+        <?php require __DIR__ . '/../partials/_admin_mobile.blade.php'; ?>
         <style>
             .tab-link.active-tab {
                 background-color: #4f46e5 !important;
@@ -50,8 +51,13 @@
 
         <?php if (isAdmin()): ?>
             <?php try { require __DIR__ . '/kelola_member.blade.php'; } catch (Throwable $e) { error_log("Error loading kelola_member: " . $e->getMessage()); } ?>
+            <?php try { require __DIR__ . '/kelola_startup.blade.php'; } catch (Throwable $e) { error_log("Error loading kelola_startup: " . $e->getMessage()); } ?>
             <?php try { require __DIR__ . '/data_presensi.blade.php'; } catch (Throwable $e) { error_log("Error loading data_presensi: " . $e->getMessage()); } ?>
+            <?php try { require __DIR__ . '/kalender_kehadiran.blade.php'; } catch (Throwable $e) { error_log("Error loading kalender_kehadiran: " . $e->getMessage()); } ?>
+            <?php try { require __DIR__ . '/review_laporan.blade.php'; } catch (Throwable $e) { error_log("Error loading review_laporan: " . $e->getMessage()); } ?>
+            <?php try { require __DIR__ . '/laporan_ringkasan.blade.php'; } catch (Throwable $e) { error_log("Error loading laporan_ringkasan: " . $e->getMessage()); } ?>
             <?php try { require __DIR__ . '/laporan_bulanan_admin.blade.php'; } catch (Throwable $e) { error_log("Error loading laporan_bulanan_admin: " . $e->getMessage()); } ?>
+            <?php try { require __DIR__ . '/riwayat_aktivitas.blade.php'; } catch (Throwable $e) { error_log("Error loading riwayat_aktivitas: " . $e->getMessage()); } ?>
             <?php try { require __DIR__ . '/settings.blade.php'; } catch (Throwable $e) { error_log("Error loading settings: " . $e->getMessage()); } ?>
             <?php try { require __DIR__ . '/dashboard.blade.php'; } catch (Throwable $e) { error_log("Error loading dashboard: " . $e->getMessage()); } ?>
             <?php try { require __DIR__ . '/admin_requests.blade.php'; } catch (Throwable $e) { error_log("Error loading admin_requests: " . $e->getMessage()); } ?>

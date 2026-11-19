@@ -73,6 +73,66 @@
         </div>
     </div>
 
+    <?php if (isAdmin()): ?>
+    <!-- Perlu Tindakan -->
+    <section id="action-center" aria-labelledby="action-center-title" class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-6">
+        <h3 id="action-center-title" class="text-lg font-bold text-gray-800 mb-4">Perlu Tindakan</h3>
+        <div id="action-center-list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            <p class="text-sm text-gray-500">Memuat daftar pekerjaan...</p>
+        </div>
+    </section>
+    <script>
+    (() => {
+        const list = document.getElementById('action-center-list');
+        const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        window.renderActionCenter = async () => {
+            let result;
+            try {
+                result = await api('?ajax=admin_get_action_center', {}, { method: 'GET', suppressModal: true });
+            } catch (e) {
+                result = { ok: false };
+            }
+            if (!result.ok) {
+                list.innerHTML = '<p class="text-sm text-red-600">Daftar pekerjaan gagal dimuat.</p>';
+                return;
+            }
+            list.innerHTML = result.data.map((item) => `<button type="button" data-target="${esc(item.target)}" class="text-left bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 rounded-2xl p-4 transition-colors">
+                <span class="block text-2xl font-bold text-gray-900">${Number(item.count).toLocaleString('id-ID')}</span>
+                <span class="block text-sm font-semibold text-gray-800">${esc(item.label)}</span>
+                <span class="block text-xs text-gray-500">${esc(item.hint)}</span>
+            </button>`).join('') || '<p class="text-sm font-semibold text-emerald-700">✓ Semua pekerjaan sudah selesai.</p>';
+        };
+        list.addEventListener('click', (e) => {
+            const target = e.target.closest('[data-target]')?.dataset.target;
+            if (!target) return;
+            if (target === 'reminder') {
+                document.getElementById('btn-open-reminder')?.click();
+            } else if (target === 'password-resets') {
+                const status = document.getElementById('member-filter-status');
+                if (status) status.value = 'reset';
+                showPage('members');
+            } else {
+                showPage(target);
+            }
+        });
+    })();
+    </script>
+
+    <!-- Pengingat WhatsApp -->
+    <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 shrink-0 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <i class="fi fi-sr-bell text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-gray-800">Pengingat WhatsApp</h3>
+                <p class="text-sm text-gray-500">Susun daftar yang belum presensi atau belum mengisi laporan, lalu tempel ke grup.</p>
+            </div>
+        </div>
+        <button type="button" id="btn-open-reminder" class="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-colors">Buat Pengingat</button>
+    </div>
+    <?php endif; ?>
+
     <!-- Penilaian KPI Absen Section (Full Width) -->
     <div class="bg-white rounded-3xl shadow-sm border border-gray-100 mb-10 overflow-hidden">
         <div class="p-6 md:p-8 border-b border-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-6">

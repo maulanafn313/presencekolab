@@ -616,6 +616,58 @@ if ($action === 'admin_set_daily_status' && $_SERVER['REQUEST_METHOD'] === 'POST
     jsonResponse(['ok' => true]);
 }
 
+if (in_array($action, ['admin_get_report_review', 'admin_get_report_review_detail'], true)) {
+    if (! isAdmin()) {
+        jsonResponse(['error' => 'Forbidden'], 403);
+    }
+    $start = trim((string) ($_REQUEST['start'] ?? '')) ?: null;
+    $end = trim((string) ($_REQUEST['end'] ?? '')) ?: null;
+    foreach ([$start, $end] as $periodDate) {
+        if ($periodDate !== null && ! \App\Services\ReportReview::isValidDate($periodDate)) {
+            jsonResponse(['ok' => false, 'message' => 'Tanggal tidak valid'], 400);
+        }
+    }
+    if ($start !== null && $end !== null && $start > $end) {
+        jsonResponse(['ok' => false, 'message' => 'Tanggal mulai tidak boleh setelah tanggal akhir'], 400);
+    }
+    if ($action === 'admin_get_report_review') {
+        jsonResponse(['ok' => true, 'data' => \App\Services\ReportReview::summary($pdo, $start, $end, $archivedExcludeUsersQuery)]);
+    }
+    $reviewUserId = (int) ($_REQUEST['user_id'] ?? 0);
+    if ($reviewUserId <= 0) {
+        jsonResponse(['ok' => false, 'message' => 'Mahasiswa tidak valid'], 400);
+    }
+    jsonResponse(['ok' => true, 'data' => \App\Services\ReportReview::detail($pdo, $reviewUserId, $start, $end)]);
+}
+
+if ($action === 'admin_bulk_approve_daily_reports' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (! isAdmin()) {
+        jsonResponse(['error' => 'Forbidden'], 403);
+    }
+    $ids = array_filter(explode(',', (string) ($_POST['ids'] ?? '')), 'strlen');
+    if ($ids === [] || count($ids) > 1000) {
+        jsonResponse(['ok' => false, 'message' => 'Daftar laporan tidak valid'], 400);
+    }
+    $approvable = \App\Services\ReportReview::approvableIds($pdo, $ids);
+    $approved = \App\Services\ReportReview::approvePending($pdo, $approvable);
+    if ($approved > 0) {
+        \App\Services\AdminActivity::record($pdo, $action, "Approve massal $approved laporan harian", null, ['type' => 'reports', 'ids' => $approvable], $_SESSION);
+        triggerDatabaseBackup();
+    }
+    jsonResponse(['ok' => true, 'approved' => $approved]);
+}
+
+if ($action === 'admin_get_period_insight') {
+    if (! isAdmin()) {
+        jsonResponse(['error' => 'Forbidden'], 403);
+    }
+    try {
+        jsonResponse(['ok' => true, 'data' => \App\Services\PeriodInsight::build($pdo, trim((string) ($_REQUEST['start'] ?? '')), trim((string) ($_REQUEST['end'] ?? '')), date('Y-m-d'))]);
+    } catch (DomainException $e) {
+        jsonResponse(['ok' => false, 'message' => $e->getMessage()], 400);
+    }
+}
+
 // Admin: save daily report for employee
 
 if ($action === 'admin_save_daily_report' && $_SERVER['REQUEST_METHOD'] === 'POST') {

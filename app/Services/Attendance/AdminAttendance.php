@@ -26,7 +26,7 @@ class AdminAttendance
                 if (! empty($data[$iso])) {
                     $data[$iso] = Carbon::parse($data[$iso])->format('Y-m-d H:i:s');
                 } elseif (! empty($data[$time]) || $part === 'masuk') {
-                    $data[$iso] = Carbon::parse($date.' '.($data[$time] ?? '08:00'))->format('Y-m-d H:i:s');
+                    $data[$iso] = Carbon::parse($date.' '.($data[$time] ?? WorkHours::defaultStart($date)))->format('Y-m-d H:i:s');
                 }
                 $data[$time] = empty($data[$iso]) ? null : substr($data[$iso], 11);
             }

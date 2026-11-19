@@ -58,18 +58,18 @@
                     <div>
                         <label class="block text-xs text-gray-600 mb-1 font-medium">Jam Maksimal On Time</label>
                         <input type="time" id="max-ontime-hour" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" value="08:00">
-                        <p class="text-xs text-gray-500 mt-1">Pegawai yang masuk setelah jam ini dianggap terlambat</p>
+                        <p class="text-xs text-gray-500 mt-1">Pegawai yang masuk setelah jam ini dianggap terlambat. Hari Jumat 07:30 sejak 7 Juli 2026.</p>
                     </div>
                     <div>
                         <label class="block text-xs text-gray-600 mb-1 font-medium">Jam Minimal Check Out</label>
                         <input type="time" id="min-checkout-hour" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" value="17:00">
-                        <p class="text-xs text-gray-500 mt-1">Pegawai tidak bisa pulang sebelum jam ini</p>
+                        <p class="text-xs text-gray-500 mt-1">Pegawai tidak bisa pulang sebelum jam ini. Hari Jumat 16:30 sejak 7 Juli 2026.</p>
                     </div>
                 </div>
                 <div class="mt-4">
                     <label class="block text-xs text-gray-600 mb-1 font-medium">Jam Pulang Default (Bulk Fix)</label>
                     <input type="time" id="default-checkout-time" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm" value="17:00">
-                    <p class="text-xs text-gray-500 mt-1">Jam pulang yang digunakan saat admin melakukan Bulk Fix data kosong</p>
+                    <p class="text-xs text-gray-500 mt-1">Jam pulang yang digunakan saat admin melakukan Bulk Fix data kosong. Hari Jumat 16:30 sejak 7 Juli 2026.</p>
                 </div>
             </div>
         </details>
