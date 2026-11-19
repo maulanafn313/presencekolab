@@ -164,8 +164,8 @@
     $('#st-cleanup-apply').addEventListener('click', () => {
         const mapping = cleanupMapping();
         const total = mapping.reduce((sum, row) => sum + row.members, 0);
-        showConfirmModal(`Sesuaikan startup ${total} mahasiswa dari ${mapping.length} nama lama? Database di-backup otomatis lebih dulu. Export dan laporan lama akan menampilkan nama baru.`, () => {
-            send('admin_apply_startup_cleanup', { mapping: JSON.stringify(mapping.map(({ name, startup_id }) => ({ name, startup_id }))) }, (r) => `${r.moved} mahasiswa disesuaikan. Backup: ${r.backup}`);
+        showConfirmModal(`Sesuaikan startup ${total} mahasiswa dari ${mapping.length} nama lama? Export dan laporan lama akan menampilkan nama baru. Perubahan ini bisa dibatalkan dari Riwayat Aktivitas.`, () => {
+            send('admin_apply_startup_cleanup', { mapping: JSON.stringify(mapping.map(({ name, startup_id }) => ({ name, startup_id }))) }, (r) => `${r.moved} mahasiswa disesuaikan. Bisa dibatalkan dari Riwayat Aktivitas.`);
         });
     });
 
@@ -189,8 +189,8 @@
             case 'merge': {
                 const target = find(+row.querySelector('[data-merge-target]').value);
                 if (!target) { showNotif('Pilih startup tujuan.', false); break; }
-                showConfirmModal(`Gabungkan ${startup.name} (${startup.members} mahasiswa) ke ${target.name}? ${startup.name} akan dihapus dari daftar. Database di-backup otomatis lebih dulu.`, () => {
-                    send('admin_merge_startup', { id, target_id: target.id }, (r) => `${r.moved} mahasiswa dipindahkan ke ${target.name}. Backup: ${r.backup}`);
+                showConfirmModal(`Gabungkan ${startup.name} (${startup.members} mahasiswa) ke ${target.name}? ${startup.name} akan dihapus dari daftar. Perubahan ini bisa dibatalkan dari Riwayat Aktivitas.`, () => {
+                    send('admin_merge_startup', { id, target_id: target.id }, (r) => `${r.moved} mahasiswa dipindahkan ke ${target.name}. Bisa dibatalkan dari Riwayat Aktivitas.`);
                 });
                 break;
             }
