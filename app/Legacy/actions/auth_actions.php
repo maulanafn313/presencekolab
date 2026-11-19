@@ -50,6 +50,10 @@ if ($action === 'register' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         jsonResponse(['ok' => false, 'message' => 'Semua field wajib diisi (termasuk foto)'], 400);
     }
 
+    if (! \App\Services\StartupDirectory::isAllowed($pdo, $startup, null)) {
+        jsonResponse(['ok' => false, 'message' => 'Pilih startup dari daftar yang tersedia'], 400);
+    }
+
     // 1. Validate email format
     if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
         jsonResponse(['ok' => false, 'message' => 'Format alamat email tidak valid'], 400);

@@ -162,6 +162,7 @@ if ($mode === 'masuk') {
         if (strpos($maxOntimeSetting, ':') === false) {
             $maxOntimeSetting = sprintf('%02d:00', (int) $maxOntimeSetting);
         }
+        $maxOntimeSetting = \App\Services\Attendance\WorkHours::latestOnTime($today, $maxOntimeSetting);
         $currentTimeString = sprintf('%02d:%02d', $currentHour, $currentMinute);
         
         $isLate = false;
@@ -606,6 +607,7 @@ if ($mode === 'masuk') {
     if (strpos($minCheckoutSetting, ':') === false) {
         $minCheckoutSetting = sprintf('%02d:00', (int) $minCheckoutSetting);
     }
+    $minCheckoutSetting = \App\Services\Attendance\WorkHours::earliestCheckout($today, $minCheckoutSetting);
     $currentTimeString = sprintf('%02d:%02d', $currentHour, $currentMinute);
 
     // Check if checked in today and not yet checked out

@@ -38,11 +38,35 @@
                 </button>
             </div>
             
-            <div class="relative mb-6">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fi fi-sr-search text-gray-400"></i>
+            <div class="bg-gray-50/50 p-4 rounded-2xl border border-gray-200/60 mb-6 space-y-3">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fi fi-sr-search text-gray-400"></i>
+                    </div>
+                    <input type="text" id="search-member" aria-label="Cari member" placeholder="Cari member berdasarkan nama atau NIM..." class="w-full pl-10 p-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm">
                 </div>
-                <input type="text" id="search-member" placeholder="Cari member berdasarkan nama atau NIM..." class="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                    <select id="member-filter-startup" aria-label="Filter startup" class="p-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm text-gray-700">
+                        <option value="">Semua Startup</option>
+                    </select>
+                    <select id="member-filter-prodi" aria-label="Filter program studi" class="p-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm text-gray-700">
+                        <option value="">Semua Program Studi</option>
+                    </select>
+                    <select id="member-filter-group" aria-label="Filter kelompok magang" class="p-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm text-gray-700">
+                        <option value="">Semua Kelompok</option>
+                    </select>
+                    <select id="member-filter-status" aria-label="Filter kelengkapan data" class="p-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm text-gray-700">
+                        <option value="">Semua Kondisi Data</option>
+                        <option value="reset">Minta Reset Password</option>
+                        <option value="no-photo">Belum Ada Foto</option>
+                        <option value="no-face">Data Wajah Belum Ada</option>
+                        <option value="no-startup">Belum Ada Startup</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                    <p id="member-filter-count" role="status" class="text-sm font-semibold text-gray-600"></p>
+                    <button type="button" id="member-filter-reset" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 px-4 rounded-xl text-sm transition-colors">Reset Filter</button>
+                </div>
             </div>
             
             <div class="overflow-x-auto rounded-2xl border border-gray-100">

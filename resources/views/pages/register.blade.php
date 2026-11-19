@@ -52,10 +52,15 @@ if (isset($_SESSION['user'])) {
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1.5">Nama Startup (Opsional)</label>
+                    <label for="register-startup" class="block text-sm font-medium text-slate-700 mb-1.5">Nama Startup (Opsional)</label>
                      <div class="relative">
                         <span class="absolute left-4 top-3.5 text-slate-400"><i class="fi fi-sr-rocket-lunch"></i></span>
-                        <input name="startup" type="text" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                        <select id="register-startup" name="startup" class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+                            <option value="">Tanpa startup</option>
+                            <?php foreach (\App\Services\StartupDirectory::activeNames(getPdo()) as $startupName): ?>
+                                <option value="<?= htmlspecialchars($startupName, ENT_QUOTES) ?>"><?= htmlspecialchars($startupName, ENT_QUOTES) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                 </div>
 

@@ -280,6 +280,7 @@ if ($action === 'admin_handle_help_request' && $_SERVER['REQUEST_METHOD'] === 'P
                     if (strpos($maxOntimeSetting, ':') === false) {
                         $maxOntimeSetting = sprintf('%02d:00', (int) $maxOntimeSetting);
                     }
+                    $maxOntimeSetting = \App\Services\Attendance\WorkHours::latestOnTime($req['tanggal'], $maxOntimeSetting);
                     if (strlen($req['jam_masuk']) >= 5) {
                         $jmTime = substr($req['jam_masuk'], 0, 5); // Assumes HH:MM format
                         if ($jmTime > $maxOntimeSetting) {

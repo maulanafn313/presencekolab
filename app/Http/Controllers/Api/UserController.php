@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Services\ApiListing;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash; // Tambahkan ini
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -111,7 +113,7 @@ class UserController extends Controller
             'prodi' => 'required|string|max:255',
             'password' => 'required|min:6',
             'foto_base64' => 'required|image|mimes:jpeg,png,jpg|max:2048', // Diubah ke image
-            'startup' => 'nullable|string',
+            'startup' => ['nullable', 'string', Rule::in(DB::table('startups')->where('is_active', true)->pluck('name')->all())],
         ], [
             'email.unique' => 'Email ini sudah digunakan.',
             'nim.unique' => 'NIM ini sudah terdaftar.',
@@ -179,6 +181,7 @@ class UserController extends Controller
                 'nim' => 'nullable|unique:users,nim,'.$id,
                 'nama' => 'nullable|string|max:255',
                 'foto_base64' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'startup' => ['nullable', 'string', Rule::in([...DB::table('startups')->where('is_active', true)->pluck('name')->all(), $user->startup])],
             ]);
 
             if ($validator->fails()) {

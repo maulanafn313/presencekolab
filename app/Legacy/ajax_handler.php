@@ -76,6 +76,8 @@ if (isset($_REQUEST['ajax'])) {
         require __DIR__.'/actions/backup_actions.php';
         require __DIR__.'/actions/help_actions.php';
         require __DIR__.'/actions/group_actions.php';
+        require __DIR__.'/actions/startup_actions.php';
+        require __DIR__.'/actions/activity_actions.php';
 
         if ($action === 'save_attendance' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = app(AttendanceSubmission::class)->submit($_POST, $_SESSION['user'] ?? []);
@@ -86,6 +88,9 @@ if (isset($_REQUEST['ajax'])) {
 
     } catch (Throwable $e) {
         if ($e instanceof ResponseSignal) {
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                \App\Services\AdminActivity::recordResponse($pdo, $action, $_SESSION ?? [], $_POST, $e->payload, $e->status);
+            }
             throw $e;
         }
         error_log('AJAX Handler Error: '.$e->getMessage().' in '.$e->getFile().':'.$e->getLine());

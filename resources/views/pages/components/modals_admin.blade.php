@@ -44,8 +44,10 @@
             </div>
             
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Nama Startup</label>
-                <input type="text" id="startup" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm">
+                <label for="startup" class="block text-sm font-semibold text-gray-700 mb-2">Nama Startup</label>
+                <select id="startup" class="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm">
+                    <option value="">Tanpa startup</option>
+                </select>
             </div>
             
             <div>
@@ -163,6 +165,170 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Tinjau Laporan Mahasiswa -->
+<div id="report-review-modal" role="dialog" aria-modal="true" aria-labelledby="rl-modal-title" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-start gap-4 p-5 border-b border-gray-100">
+            <div>
+                <h3 id="rl-modal-title" class="text-xl font-bold text-gray-800"></h3>
+                <p id="rl-modal-subtitle" class="text-sm text-gray-500"></p>
+            </div>
+            <button type="button" id="rl-modal-close" aria-label="Tutup" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">✕</button>
+        </div>
+        <div id="rl-modal-body" class="flex-1 overflow-y-auto p-5 space-y-3"></div>
+        <div class="flex flex-wrap justify-end items-center gap-2 p-4 border-t border-gray-100">
+            <select id="rl-modal-filter" aria-label="Filter laporan mahasiswa" class="mr-auto p-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700">
+                <option value="pending">Menunggu Review</option>
+                <option value="flagged">Perlu Dicek</option>
+                <option value="late">Telat Diisi</option>
+                <option value="">Semua Laporan</option>
+            </select>
+            <button type="button" id="rl-modal-close-footer" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-xl text-sm">Tutup</button>
+            <button type="button" id="rl-modal-approve-all" class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold px-4 py-2 rounded-xl text-sm">Approve Semua (0)</button>
+        </div>
+    </div>
+</div>
+
+<?php if (isAdmin()): ?>
+<!-- Modal Detail Kalender Kehadiran -->
+<div id="cal-modal" role="dialog" aria-modal="true" aria-labelledby="cal-modal-title" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5">
+        <div class="flex justify-between items-start gap-4 mb-3">
+            <div>
+                <h3 id="cal-modal-title" class="text-lg font-bold text-gray-800"></h3>
+                <p id="cal-modal-date" class="text-sm text-gray-500"></p>
+            </div>
+            <button type="button" id="cal-modal-close" aria-label="Tutup" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">✕</button>
+        </div>
+        <p id="cal-modal-info" class="text-sm font-semibold text-gray-700 bg-gray-50 rounded-xl p-3 mb-4"></p>
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Ubah keterangan</h4>
+        <div id="cal-modal-kets" class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4"></div>
+        <div id="cal-modal-status-wrap">
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">Ubah status masuk</h4>
+            <div id="cal-modal-status" class="grid grid-cols-2 gap-2"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Pengingat WhatsApp -->
+<div id="reminder-modal" role="dialog" aria-modal="true" aria-labelledby="reminder-title" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-start gap-4 p-5 border-b border-gray-100">
+            <div>
+                <h3 id="reminder-title" class="text-xl font-bold text-gray-800">Pengingat WhatsApp</h3>
+                <p class="text-sm text-gray-500">Periksa pesan, salin, lalu tempel ke grup.</p>
+            </div>
+            <button type="button" id="reminder-close" aria-label="Tutup" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">✕</button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-5 space-y-4">
+            <div>
+                <label for="reminder-startup" class="block text-sm font-semibold text-gray-700 mb-1">Kirim untuk</label>
+                <select id="reminder-startup" class="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Semua Startup</option>
+                </select>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 sm:gap-6 text-sm text-gray-700">
+                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="reminder-absent" checked class="w-4 h-4 rounded border-gray-300"> Belum presensi hari ini</label>
+                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="reminder-reports" checked class="w-4 h-4 rounded border-gray-300"> Belum mengisi laporan</label>
+            </div>
+            <div>
+                <label for="reminder-text" class="block text-sm font-semibold text-gray-700 mb-1">Isi pesan</label>
+                <textarea id="reminder-text" rows="12" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+        </div>
+        <div class="flex flex-wrap justify-end items-center gap-2 p-4 border-t border-gray-100">
+            <p id="reminder-status" role="status" class="mr-auto text-sm text-gray-600"></p>
+            <button type="button" id="reminder-close-footer" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-xl text-sm">Tutup</button>
+            <button type="button" id="reminder-copy" disabled class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold px-4 py-2 rounded-xl text-sm">Salin Pesan</button>
+        </div>
+    </div>
+</div>
+<script>
+(() => {
+    const el = (id) => document.getElementById(id);
+    const modal = el('reminder-modal'), text = el('reminder-text'), status = el('reminder-status'), copyBtn = el('reminder-copy'), startup = el('reminder-startup');
+    let data = null;
+
+    // Penulisan startup di data bervariasi, misalnya "Uni Inside" dan "Uni-Inside".
+    const startupKey = (name) => String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cleanName = (name) => String(name || '').replace(/\s+/g, ' ').trim();
+    const longDate = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const numbered = (items) => items.map((item, i) => `${i + 1}. ${item}`).join('\n');
+    const syncCopy = () => { copyBtn.disabled = !text.value.trim(); };
+
+    function compose() {
+        if (!data) return;
+        const key = startup.value;
+        const list = data.students.filter((s) => !key || startupKey(s.startup) === key);
+        const absent = el('reminder-absent').checked ? list.filter((s) => s.absent_today) : [];
+        const reports = el('reminder-reports').checked ? list.filter((s) => s.missing_reports > 0) : [];
+        status.textContent = '';
+        if (!absent.length && !reports.length) {
+            text.value = '';
+            status.textContent = 'Tidak ada yang perlu diingatkan.';
+            syncCopy();
+            return;
+        }
+        const label = key ? ` - ${startup.selectedOptions[0].textContent}` : '';
+        const parts = [`*Pengingat Presensi & Laporan Harian${label}*\n${longDate(data.date)}`];
+        if (absent.length) parts.push(`*Belum presensi hari ini:*\n${numbered(absent.map((s) => cleanName(s.nama)))}`);
+        if (reports.length) parts.push(`*Belum mengisi laporan harian (${data.max_days_back} hari terakhir):*\n${numbered(reports.map((s) => `${cleanName(s.nama)} (${s.missing_reports} laporan)`))}`);
+        parts.push('Mohon segera dilengkapi. Terima kasih.');
+        text.value = parts.join('\n\n');
+        syncCopy();
+    }
+
+    function fillStartups() {
+        const selected = startup.value, names = new Map();
+        data.students.forEach((s) => { if (startupKey(s.startup) && !names.has(startupKey(s.startup))) names.set(startupKey(s.startup), cleanName(s.startup)); });
+        startup.length = 1;
+        [...names].sort((a, b) => a[1].localeCompare(b[1])).forEach(([value, label]) => startup.add(new Option(label, value)));
+        startup.value = names.has(selected) ? selected : '';
+    }
+
+    async function open() {
+        modal.classList.remove('hidden');
+        data = null;
+        text.value = '';
+        syncCopy();
+        status.textContent = 'Memuat data...';
+        try {
+            const r = await api('?ajax=admin_get_attendance_reminder', {}, { method: 'GET', suppressModal: true });
+            if (!r.ok) throw new Error(r.message);
+            data = r.data;
+            fillStartups();
+            compose();
+        } catch (e) {
+            status.textContent = 'Gagal memuat data. Coba lagi.';
+        }
+    }
+
+    async function copy() {
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text.value);
+                return true;
+            }
+        } catch (e) { /* lanjut ke cara lama */ }
+        text.focus();
+        text.select();
+        try { return document.execCommand('copy'); } catch (e) { return false; }
+    }
+
+    const close = () => modal.classList.add('hidden');
+    el('btn-open-reminder')?.addEventListener('click', open);
+    el('reminder-close').addEventListener('click', close);
+    el('reminder-close-footer').addEventListener('click', close);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) close(); });
+    [startup, el('reminder-absent'), el('reminder-reports')].forEach((input) => input.addEventListener('change', compose));
+    text.addEventListener('input', () => { status.textContent = ''; syncCopy(); });
+    copyBtn.addEventListener('click', async () => {
+        status.textContent = await copy() ? 'Pesan tersalin. Tempel ke grup WhatsApp.' : 'Gagal menyalin. Teks sudah terpilih, tekan Ctrl+C.';
+    });
+})();
+</script>
+<?php endif; ?>
 
 <!-- Modal Pilihan Export Data Presensi -->
 <div id="export-presensi-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden p-4">

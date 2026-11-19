@@ -33,6 +33,11 @@ return [
         'key' => env('INTEGRATION_API_KEY'),
     ],
 
+    // Sumber daftar startup untuk menu Kelola Startup.
+    'portal' => [
+        'url' => env('PORTAL_URL', 'https://portal.kolab.top'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -23,8 +23,20 @@
             <button data-tab="members" class="tab-link w-full text-left py-2.5 px-4 font-semibold text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition duration-300 flex items-center gap-3">
                 <i class="fi fi-sr-users text-lg w-6"></i> Kelola Member
             </button>
+            <button data-tab="startups" class="tab-link w-full text-left py-2.5 px-4 font-semibold text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition duration-300 flex items-center gap-3">
+                <i class="fi fi-sr-rocket-lunch text-lg w-6"></i> Kelola Startup
+            </button>
             <button data-tab="laporan" class="tab-link w-full text-left py-2.5 px-4 font-semibold text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition duration-300 flex items-center gap-3">
                 <i class="fi fi-sr-document text-lg w-6"></i> Data Presensi
+            </button>
+            <button data-tab="calendar" class="tab-link w-full text-left py-2.5 px-4 font-semibold text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition duration-300 flex items-center gap-3">
+                <i class="fi fi-sr-calendar-check text-lg w-6"></i> Kalender Kehadiran
+            </button>
+            <button data-tab="review-laporan" class="tab-link w-full text-left py-2.5 px-4 font-semibold text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition duration-300 flex items-center gap-3">
+                <i class="fi fi-sr-document-signed text-lg w-6"></i> Review Laporan
+            </button>
+            <button data-tab="insight" class="tab-link w-full text-left py-2.5 px-4 font-semibold text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition duration-300 flex items-center gap-3">
+                <i class="fi fi-sr-chart-histogram text-lg w-6"></i> Laporan Ringkasan
             </button>
             <button data-tab="admin-monthly" class="tab-link w-full text-left py-2.5 px-4 font-semibold text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition duration-300 flex items-center gap-3">
                 <i class="fi fi-sr-calendar text-lg w-6"></i> Laporan Bulanan
@@ -32,10 +44,14 @@
             <button data-tab="help-requests" class="tab-link w-full text-left py-2.5 px-4 font-semibold text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition duration-300 flex items-center gap-3">
                 <i class="fi fi-sr-interrogation text-lg w-6"></i> Requests
             </button>
+            <button data-tab="activity" class="tab-link w-full text-left py-2.5 px-4 font-semibold text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition duration-300 flex items-center gap-3">
+                <i class="fi fi-sr-time-past text-lg w-6"></i> Riwayat Aktivitas
+            </button>
             <button data-tab="settings" class="tab-link w-full text-left py-2.5 px-4 font-semibold text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition duration-300 flex items-center gap-3">
                 <i class="fi fi-sr-settings text-lg w-6"></i> Settings
             </button>
 
+            <?php if (! app()->isProduction()): ?>
             <!-- Separator -->
             <div class="h-px bg-gray-200 my-4 w-full"></div>
             <div class="px-4 pb-2">
@@ -46,6 +62,7 @@
             <button data-tab="qa-panel" class="tab-link w-full text-left py-2.5 px-4 font-semibold text-gray-600 hover:bg-orange-50 hover:text-orange-600 rounded-xl transition duration-300 flex items-center gap-3">
                 <i class="fi fi-sr-flask text-lg w-6"></i> QA Testing Panel
             </button>
+            <?php endif; ?>
         </nav>
     </div>
 </aside>

@@ -69,16 +69,37 @@
             
             <div class="flex justify-end gap-2 pt-2">
                  <button id="btn-show-all" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 px-4 rounded-xl text-sm transition-colors">Reset Filter</button>
+                 <button id="btn-week-last" type="button" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2 px-4 rounded-xl text-sm transition-colors">Minggu Lalu</button>
+                 <button id="btn-week-this" type="button" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2 px-4 rounded-xl text-sm transition-colors">Minggu Ini</button>
                  <button id="btn-toggle-today" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2 px-4 rounded-xl text-sm transition-colors flex items-center gap-2">
                     <i class="fi fi-sr-calendar-check"></i> Hari Ini
                  </button>
             </div>
         </div>
 
+        <div id="att-bulk-bar" class="hidden flex flex-col lg:flex-row lg:items-center gap-3 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-4">
+            <p id="att-bulk-count" role="status" class="text-sm font-bold text-indigo-800 lg:mr-auto"></p>
+            <select id="att-bulk-status" aria-label="Ubah status masuk" class="p-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm text-gray-700 disabled:bg-gray-100 disabled:text-gray-400">
+                <option value="">Status masuk: tetap</option>
+                <option value="ontime">On Time</option>
+                <option value="terlambat">Terlambat</option>
+            </select>
+            <select id="att-bulk-ket" aria-label="Ubah keterangan" class="p-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm text-gray-700">
+                <option value="">Keterangan: tetap</option>
+                <option value="wfo">Hadir (WFO)</option>
+                <option value="wfa">WFA</option>
+                <option value="izin">Izin</option>
+                <option value="sakit">Sakit</option>
+            </select>
+            <button id="att-bulk-clear" type="button" class="bg-white hover:bg-gray-100 text-gray-700 font-bold py-2.5 px-4 rounded-xl text-sm border border-gray-200 transition-colors">Batal</button>
+            <button id="att-bulk-apply" type="button" disabled class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-colors">Terapkan</button>
+        </div>
+
         <div class="overflow-x-auto rounded-2xl border border-gray-100">
             <table class="w-full min-w-max text-sm text-left text-gray-500">
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50/50">
                     <tr>
+                        <th class="py-4 pl-4 pr-2"><input type="checkbox" id="att-bulk-all" aria-label="Pilih semua data sesuai filter" class="w-4 h-4 rounded border-gray-300 text-indigo-600 cursor-pointer"></th>
                         <th class="py-4 px-6 font-bold text-gray-800">Tanggal</th>
                         <th class="py-4 px-6 font-bold text-gray-800">NIM</th>
                         <th class="py-4 px-6 font-bold text-gray-800">Nama</th>
