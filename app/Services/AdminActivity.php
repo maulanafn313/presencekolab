@@ -41,9 +41,7 @@ final class AdminActivity
         'admin_create_startup' => 'Menambah startup',
         'admin_rename_startup' => 'Mengubah nama startup',
         'admin_set_startup_active' => 'Mengubah status startup',
-        'admin_merge_startup' => 'Menggabungkan startup',
         'admin_sync_startups' => 'Sinkron startup dari portal',
-        'admin_apply_startup_cleanup' => 'Merapikan nama startup lama',
     ];
 
     /** Hanya nilai ini yang boleh tersimpan. Password, foto, dan isi laporan tidak pernah dicatat. */
@@ -113,7 +111,11 @@ final class AdminActivity
             }
 
             $payload = json_decode($log['undo_payload'], true);
-            $result = $payload['type'] === 'reports' ? self::undoReports($pdo, $payload) : self::undoAttendance($pdo, $payload);
+            $result = match ($payload['type']) {
+                'reports' => self::undoReports($pdo, $payload),
+                'startup' => self::undoStartup($pdo, $payload),
+                default => self::undoAttendance($pdo, $payload),
+            };
             $pdo->prepare('UPDATE admin_activity_logs SET undone_at = NOW(), undone_by = ? WHERE id = ?')->execute([$session['user']['nama'] ?? 'Admin', $id]);
             $pdo->commit();
         } catch (Throwable $e) {
@@ -137,6 +139,30 @@ final class AdminActivity
         }
 
         return ['restored' => $restored, 'skipped' => count($payload['ids']) - $restored, 'touched' => []];
+    }
+
+    /** Startup yang terhapus karena digabung dibuat lagi bila namanya belum dipakai. */
+    private static function undoStartup(PDO $pdo, array $payload): array
+    {
+        $startup = $payload['restore_startup'] ?? null;
+        if ($startup) {
+            $key = StartupDirectory::key($startup['name']);
+            $exists = $pdo->prepare('SELECT id FROM startups WHERE name_key = ?');
+            $exists->execute([$key]);
+            if (! $exists->fetchColumn()) {
+                $pdo->prepare('INSERT INTO startups (name, name_key, is_active, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())')
+                    ->execute([$startup['name'], $key, $startup['is_active']]);
+            }
+        }
+
+        $restored = 0;
+        $stmt = $pdo->prepare('UPDATE users SET startup = ? WHERE id = ? AND CAST(startup AS BINARY) = CAST(? AS BINARY)');
+        foreach ($payload['changes'] as [$userId, $from, $to]) {
+            $stmt->execute([$from, $userId, $to]);
+            $restored += $stmt->rowCount();
+        }
+
+        return ['restored' => $restored, 'skipped' => count($payload['changes']) - $restored, 'touched' => []];
     }
 
     private static function undoAttendance(PDO $pdo, array $payload): array

@@ -124,7 +124,8 @@ final class StartupDirectory
         $pdo->prepare('UPDATE startups SET is_active = ?, updated_at = NOW() WHERE id = ?')->execute([(int) $active, $id]);
     }
 
-    public static function merge(PDO $pdo, int $sourceId, int $targetId): int
+    /** @return array{moved: int, summary: string, undo: array} */
+    public static function merge(PDO $pdo, int $sourceId, int $targetId): array
     {
         if ($sourceId === $targetId) {
             throw new DomainException('Pilih startup tujuan yang berbeda.');
@@ -136,35 +137,41 @@ final class StartupDirectory
         }
 
         return self::transaction($pdo, function () use ($pdo, $source, $target) {
-            $moved = self::moveMembers($pdo, $source['name'], $target['name']);
+            $changes = self::moveTracked($pdo, $source['name'], $target['name']);
             $pdo->prepare('DELETE FROM startups WHERE id = ?')->execute([$source['id']]);
 
-            return $moved;
+            return [
+                'moved' => count($changes),
+                'summary' => "Menggabungkan startup {$source['name']} ke {$target['name']}",
+                'undo' => ['type' => 'startup', 'changes' => $changes, 'restore_startup' => ['name' => $source['name'], 'is_active' => (int) $source['is_active']]],
+            ];
         });
     }
 
     /**
      * @param  array<int, array{name: string, startup_id: int}>  $mapping
      */
-    public static function applyCleanup(PDO $pdo, array $mapping): int
+    public static function applyCleanup(PDO $pdo, array $mapping): array
     {
         if ($mapping === [] || count($mapping) > self::MAX_CLEANUP_ROWS) {
             throw new DomainException('Pilih minimal satu nama untuk disesuaikan.');
         }
 
         return self::transaction($pdo, function () use ($pdo, $mapping) {
-            $moved = 0;
-            $stmt = $pdo->prepare("UPDATE users SET startup = ? WHERE role = 'pegawai' AND CAST(startup AS BINARY) = CAST(? AS BINARY)");
+            $changes = [];
             foreach ($mapping as $row) {
                 $target = self::find($pdo, (int) ($row['startup_id'] ?? 0));
                 if (! $target['is_active']) {
                     throw new DomainException("Startup {$target['name']} sedang nonaktif.");
                 }
-                $stmt->execute([$target['name'], (string) ($row['name'] ?? '')]);
-                $moved += $stmt->rowCount();
+                array_push($changes, ...self::moveTracked($pdo, (string) ($row['name'] ?? ''), $target['name']));
             }
 
-            return $moved;
+            return [
+                'moved' => count($changes),
+                'summary' => 'Merapikan '.count($mapping).' nama startup lama ('.count($changes).' mahasiswa)',
+                'undo' => $changes === [] ? null : ['type' => 'startup', 'changes' => $changes],
+            ];
         });
     }
 
@@ -247,6 +254,21 @@ final class StartupDirectory
     {
         self::moveMembers($pdo, $startup['name'], $name);
         $pdo->prepare('UPDATE startups SET name = ?, name_key = ?, updated_at = NOW() WHERE id = ?')->execute([$name, self::key($name), $startup['id']]);
+    }
+
+    /**
+     * Sama seperti moveMembers(), tetapi mencatat siapa saja yang dipindah agar bisa dibatalkan.
+     *
+     * @return list<array{0: int, 1: string, 2: string}>
+     */
+    private static function moveTracked(PDO $pdo, string $from, string $to): array
+    {
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE role = 'pegawai' AND CAST(startup AS BINARY) = CAST(? AS BINARY) FOR UPDATE");
+        $stmt->execute([$from]);
+        $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        self::moveMembers($pdo, $from, $to);
+
+        return array_map(fn ($id) => [(int) $id, $from, $to], $ids);
     }
 
     private static function moveMembers(PDO $pdo, string $from, string $to): int
