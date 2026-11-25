@@ -1073,8 +1073,10 @@ function simpleHash(str){
 
 async function computeMembersVersionKey(membersList){
     try{
-        const basis = membersList.map(m=>[m.nim, m.foto||m.photo||m.image||'', m.nama||'']).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
-        return simpleHash(JSON.stringify(basis)) + "-v3-members-fix"; // v3: force cache bust for members array fix
+        // Include the embedding itself: re-registering a face must invalidate the cache,
+        // otherwise devices keep matching against the old (wrong) descriptor forever.
+        const basis = membersList.map(m=>[m.id, m.nim, m.nama||'', m.face_embedding||'', m.has_foto||'']).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+        return simpleHash(JSON.stringify(basis)) + "-v4-embedding";
     }catch(e){ return 'v-default'; }
 }
 

@@ -266,7 +266,12 @@ if ($mode === 'masuk') {
 
         // Build candidate IP list: REMOTE_ADDR first, then forwarded, then POST
         $ipCandidates = [];
-        if (! empty($remoteAddr) && filter_var($remoteAddr, FILTER_VALIDATE_IP)) {
+        // Behind Cloudflare REMOTE_ADDR is the CF edge server, whose ip-api location
+        // (often US/Singapore) made every IP-vs-GPS distance check fail. Use the real client IP.
+        $cfClientIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '';
+        if (filter_var($cfClientIp, FILTER_VALIDATE_IP)) {
+            $ipCandidates[] = $cfClientIp;
+        } elseif (! empty($remoteAddr) && filter_var($remoteAddr, FILTER_VALIDATE_IP)) {
             $ipCandidates[] = $remoteAddr;
         }
         if (! empty($forwardedFor)) {
