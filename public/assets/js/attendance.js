@@ -71,6 +71,7 @@ const livenessState = {
     livenessConfirmed: false,
     totalFrames: 0,
     consecutiveRecognitionFrames: 0,
+    lastMatchLabel: null,      // consecutive frames must agree on the same person
     autoConfirmAfterFrames: 3, // Only 3 recognition frames needed (~1-2s max)
     nullFramesDuringBlink: 0,
     calibrationFrames: 3       // Only 3 frames to calibrate EAR baseline
@@ -180,6 +181,35 @@ function getAdjustedQualityThreshold() {
 
 function getAdjustedFaceMatcherThreshold() { return detectionConfig.faceMatcherThreshold; }
 
+// Distance threshold from settings (was hardcoded 0.5 = accepts 50% similarity,
+// too loose: different people often land at 0.4-0.5 with face-api descriptors).
+function buildFaceMatcher() {
+    const t = parseFloat(detectionConfig.faceMatcherThreshold);
+    return new faceapi.FaceMatcher(labeledFaceDescriptors, t > 0 && t < 1 ? t : 0.4);
+}
+
+// Min gap between best and runner-up person. Below it the face is ambiguous
+// (looks like two employees) and must not be auto-accepted.
+const MIN_MATCH_MARGIN = 0.06;
+
+// Distance to the closest *other* person; Infinity when gallery holds one person.
+function secondBestDistance(descriptor, bestLabel) {
+    let min = Infinity;
+    for (const ld of faceMatcher.labeledDescriptors) {
+        if (ld.label === bestLabel) continue;
+        for (const d of ld.descriptors) min = Math.min(min, faceapi.euclideanDistance(descriptor, d));
+    }
+    return min;
+}
+
+// Detector input size for the recognition pass. 160 gave coarse boxes/landmarks,
+// so the aligned face crop (and its descriptor) was noisy -> wrong matches.
+function getRecognitionInputSize() {
+    const wanted = parseInt(detectionConfig.inputSize, 10) || 320;
+    const cap = detectDevicePerformance() === 'low' ? 224 : 416;
+    return Math.max(224, Math.round(Math.min(wanted, cap) / 32) * 32);
+}
+
 // ---- Face Recognition Setup ----
 
 async function initializeFaceRecognition() {
@@ -211,7 +241,7 @@ async function initializeFaceRecognition() {
             .then(() => {
                 // Build faceMatcher immediately after descriptors load
                 if (labeledFaceDescriptors.length > 0 && !faceMatcher) {
-                    faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.5);
+                    faceMatcher = buildFaceMatcher();
                     console.log(`✅ FaceMatcher prebuilt with ${labeledFaceDescriptors.length} members — scan will be instant!`);
                 }
             })
@@ -364,7 +394,7 @@ async function loadLabeledFaceDescriptors() {
                 window._loadingDescriptors = false;
                 
                 if (labeledFaceDescriptors.length > 0) {
-                    faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.5);
+                    faceMatcher = buildFaceMatcher();
                 }
                 return;
             }
@@ -460,7 +490,7 @@ async function loadLabeledFaceDescriptors() {
         }
 
         if (labeledFaceDescriptors.length > 0) {
-            faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.5);
+            faceMatcher = buildFaceMatcher();
         }
         
         // Save to IDB for next time
@@ -519,9 +549,8 @@ async function startScan(mode) {
 
     // FAST PATH: If faceMatcher already ready from previous session, start immediately
     if (faceMatcher && labeledFaceDescriptors.length > 0) {
+        if (!(await startVideo())) return; // startVideo already showed the reason
         statusMessage('Sistem siap! Arahkan wajah ke kamera.', 'bg-green-100 text-green-700');
-        // Start camera, then begin detection loop after camera is ready
-        await startVideo();
         startVideoInterval();
         return;
     }
@@ -538,42 +567,64 @@ async function startScan(mode) {
     // Start camera immediately (parallel with everything else)
     const cameraPromise = startVideo();
 
-    // Ensure models are loaded
-    if (!window.faceApiModelsLoaded) {
-        await loadFaceApiModels();
-    } else {
-        updateLoadingProgress(80, 'Model AI sudah siap!');
+    try {
+        // Ensure models are loaded
+        if (!window.faceApiModelsLoaded) {
+            await loadFaceApiModels();
+        } else {
+            updateLoadingProgress(80, 'Model AI sudah siap!');
+        }
+
+        // Load descriptors if needed
+        if (labeledFaceDescriptors.length === 0) {
+            await loadLabeledFaceDescriptors();
+        } else {
+            updateLoadingProgress(100, `✅ Sistem siap! ${labeledFaceDescriptors.length} wajah dimuat.`);
+        }
+    } catch (e) {
+        console.error('System init failed:', e);
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
+        statusMessage('Gagal memuat sistem pengenalan wajah. Periksa koneksi lalu muat ulang halaman.', 'bg-red-100 text-red-700');
+        return;
     }
 
-    // Wait for camera
-    await cameraPromise;
-
-    // Load descriptors if needed
-    if (labeledFaceDescriptors.length === 0) {
-        await loadLabeledFaceDescriptors();
-    } else {
-        updateLoadingProgress(100, `✅ Sistem siap! ${labeledFaceDescriptors.length} wajah dimuat.`);
-    }
-    
     // Build faceMatcher if not yet built
     if (!faceMatcher && labeledFaceDescriptors.length > 0) {
-        faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.5);
+        faceMatcher = buildFaceMatcher();
         console.log(`✅ FaceMatcher built with ${labeledFaceDescriptors.length} descriptors`);
     }
 
     // Hide loading overlay
     if (loadingOverlay) loadingOverlay.classList.add('hidden');
 
+    // Wait for camera; startVideo already showed the reason if it failed
+    if (!(await cameraPromise)) return;
+
+    if (!faceMatcher) {
+        statusMessage('Data wajah belum terdaftar. Hubungi admin untuk registrasi wajah.', 'bg-red-100 text-red-700');
+        return;
+    }
+
     statusMessage('Sistem siap! Arahkan wajah ke kamera.', 'bg-green-100 text-green-700');
     startVideoInterval();
 }
 
+// Returns true when the camera is streaming, false (with a visible reason) otherwise.
 async function startVideo() {
-    if (!video) return;
+    if (!video) return false;
+    // Tell the user something is happening; on mobile the permission prompt or a
+    // busy camera can keep getUserMedia pending with no feedback at all.
+    const slowHint = setTimeout(() => statusMessage('Menunggu kamera... Izinkan akses kamera bila diminta, atau tutup aplikasi lain yang memakai kamera.', 'bg-yellow-100 text-yellow-700'), 6000);
     try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            const e = new Error('mediaDevices unavailable');
+            e.name = 'InsecureContextError';
+            throw e;
+        }
         const perfLevel = detectDevicePerformance();
         // Use low resolution on low-end devices for faster camera start
         const constraints = {
+            audio: false,
             video: {
                 facingMode: 'user',
                 width:  { ideal: perfLevel === 'low' ? 320 : 640 },
@@ -585,6 +636,7 @@ async function startVideo() {
         try {
             stream = await navigator.mediaDevices.getUserMedia(constraints);
         } catch (firstErr) {
+            if (firstErr.name === 'NotAllowedError') throw firstErr; // retrying won't help
             console.warn('Camera with ideal constraints failed, trying fallback:', firstErr.message);
             // Fallback: try front camera with basic constraints
             try {
@@ -596,19 +648,22 @@ async function startVideo() {
             }
         }
         
+        video.muted = true;               // required for autoplay on Android/iOS
+        video.setAttribute('playsinline', '');
         video.srcObject = stream;
         isCameraActive = true;
 
-        // Wait for camera to be actually ready (metadata loaded + playing)
+        // Wait for metadata (may already be loaded, so check readyState first)
         await new Promise((resolve) => {
-            video.onloadedmetadata = () => {
-                video.play().then(resolve).catch(resolve);
-            };
-            // Safety timeout in case onloadedmetadata never fires
+            if (video.readyState >= 1) return resolve();
+            video.onloadedmetadata = () => resolve();
             setTimeout(resolve, 5000);
         });
+        // Explicit play(): autoplay alone leaves the video black on some mobile browsers
+        try { await video.play(); } catch (e) { console.warn('video.play() failed:', e); }
 
         console.log('✅ Camera ready:', video.videoWidth, 'x', video.videoHeight);
+        return true;
     } catch (err) {
         console.error('Camera error:', err);
         let errMsg = 'Gagal mengakses kamera.';
@@ -620,8 +675,13 @@ async function startVideo() {
             errMsg = 'Kamera sedang digunakan oleh aplikasi lain. Tutup aplikasi lain yang menggunakan kamera.';
         } else if (err.name === 'OverconstrainedError') {
             errMsg = 'Kamera tidak mendukung konfigurasi yang diperlukan. Coba gunakan perangkat lain.';
+        } else if (err.name === 'InsecureContextError') {
+            errMsg = 'Browser tidak mengizinkan kamera. Buka aplikasi lewat https:// di Chrome/Safari (bukan browser bawaan aplikasi lain).';
         }
         statusMessage(errMsg, 'bg-red-100 text-red-700');
+        return false;
+    } finally {
+        clearTimeout(slowHint);
     }
 }
 
@@ -667,13 +727,14 @@ let _detectionRunning = false; // Prevent concurrent async detection calls
 let lastRecognitionLabel = 'Posisikan wajah...';
 let lastRecognitionColor = '#3b82f6';
 let _frameCount = 0; // For throttling descriptor computation
-let _lastDescriptor = null; // Cached descriptor from last recognition pass
+
 let _lastRecognitionMatch = null; // Cached recognition result
 
 function startVideoInterval() {
     if (!isCameraActive || videoInterval || !video) return;
 
     const detectionDelay = 80; // ms — fast enough to catch blinks
+    const recognitionInputSize = getRecognitionInputSize();
 
     async function detectionLoop() {
         if (isDetectionStopped || !isCameraActive) return;
@@ -719,11 +780,8 @@ function startVideoInterval() {
                     // Full pass: detector + landmarks + descriptor (slower, for recognition)
                     detection = await faceapi.detectSingleFace(
                         video,
-                        new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.4 })
+                        new faceapi.TinyFaceDetectorOptions({ inputSize: recognitionInputSize, scoreThreshold: 0.4 })
                     ).withFaceLandmarks().withFaceDescriptor();
-                    if (detection) {
-                        _lastDescriptor = detection.descriptor;
-                    }
                 } else {
                     // Lightweight pass: detector + landmarks ONLY (for liveness + drawing)
                     const lightDetection = await faceapi.detectSingleFace(
@@ -731,11 +789,9 @@ function startVideoInterval() {
                         new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.4 })
                     ).withFaceLandmarks();
 
-                    // Wrap into compatible shape (no descriptor)
-                    detection = lightDetection ? {
-                        ...lightDetection,
-                        descriptor: _lastDescriptor // reuse last known descriptor
-                    } : null;
+                    // No descriptor: matching only runs on fresh descriptors, otherwise
+                    // one stale descriptor would be counted as several "consistent" frames.
+                    detection = lightDetection ? { ...lightDetection, descriptor: null } : null;
                 }
 
                 const ctx = canvas.getContext('2d');
@@ -810,8 +866,11 @@ function startVideoInterval() {
                         const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
                         const confidencePercent = Math.round((1 - bestMatch.distance) * 100);
                         const minConf = detectionConfig.minConfidencePercent || 65;
+                        const isKnown = bestMatch.label !== 'unknown';
+                        const ambiguous = isKnown &&
+                            secondBestDistance(detection.descriptor, bestMatch.label) - bestMatch.distance < MIN_MATCH_MARGIN;
 
-                        if (bestMatch.label !== 'unknown' && confidencePercent >= minConf) {
+                        if (isKnown && confidencePercent >= minConf && !ambiguous) {
                             const matchedMember = members.find(m =>
                                 String(m.nim || '') === String(bestMatch.label) ||
                                 String(m.nama || '') === String(bestMatch.label) ||
@@ -819,23 +878,32 @@ function startVideoInterval() {
                             );
                             const memberName = matchedMember ? matchedMember.nama : bestMatch.label;
 
-                            if (!livenessState.livenessConfirmed) {
-                                livenessState.consecutiveRecognitionFrames++;
-                                // Auto-confirm after just 3 recognition frames
-                                if (livenessState.consecutiveRecognitionFrames >= livenessState.autoConfirmAfterFrames) {
-                                    livenessState.livenessConfirmed = true;
-                                    console.log(`✅ Liveness auto-confirmed (${livenessState.consecutiveRecognitionFrames} frames)`);
-                                }
-                                const blinkHint = ` - Kedipkan mata!`;
-                                lastRecognitionLabel = `${memberName} (${confidencePercent}%)${blinkHint}`;
+                            // Count only consecutive fresh frames that agree on the SAME person
+                            if (livenessState.lastMatchLabel !== bestMatch.label) {
+                                livenessState.lastMatchLabel = bestMatch.label;
+                                livenessState.consecutiveRecognitionFrames = 0;
+                            }
+                            livenessState.consecutiveRecognitionFrames++;
+                            const stable = livenessState.consecutiveRecognitionFrames >= livenessState.autoConfirmAfterFrames;
+
+                            if (!livenessState.livenessConfirmed && stable) {
+                                livenessState.livenessConfirmed = true;
+                                console.log(`✅ Liveness auto-confirmed (${livenessState.consecutiveRecognitionFrames} frames)`);
+                            }
+
+                            if (!livenessState.livenessConfirmed || !stable) {
+                                lastRecognitionLabel = `${memberName} (${confidencePercent}%) - Kedipkan mata!`;
                                 lastRecognitionColor = '#f59e0b';
                             } else {
-                                livenessState.consecutiveRecognitionFrames = 0;
                                 lastRecognitionLabel = `${memberName} (${confidencePercent}%)`;
                                 lastRecognitionColor = '#22c55e';
                                 handleRecognition(matchedMember ? (matchedMember.id || matchedMember[0]) : bestMatch.label, 'neutral');
                             }
-                        } else if (bestMatch.label !== 'unknown' && confidencePercent < minConf) {
+                        } else if (ambiguous && confidencePercent >= minConf) {
+                            livenessState.consecutiveRecognitionFrames = 0;
+                            lastRecognitionLabel = 'Wajah mirip beberapa pegawai - dekatkan & hadap lurus';
+                            lastRecognitionColor = '#f97316';
+                        } else if (isKnown && confidencePercent < minConf) {
                             livenessState.consecutiveRecognitionFrames = 0;
                             lastRecognitionLabel = `Kemiripan terlalu rendah: ${confidencePercent}% (min: ${minConf}%)`;
                             lastRecognitionColor = '#f97316';
@@ -846,7 +914,7 @@ function startVideoInterval() {
                         }
                     } else if (!faceMatcher) {
                         if (labeledFaceDescriptors.length > 0) {
-                            faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.5);
+                            faceMatcher = buildFaceMatcher();
                             lastRecognitionLabel = 'Sistem siap...';
                         } else {
                             lastRecognitionLabel = 'Mempersiapkan sistem...';
@@ -936,6 +1004,7 @@ function resetLiveness() {
     livenessState.livenessConfirmed = false;
     livenessState.totalFrames = 0;
     livenessState.consecutiveRecognitionFrames = 0;
+    livenessState.lastMatchLabel = null;
     livenessState.nullFramesDuringBlink = 0;
 }
 
@@ -1000,8 +1069,10 @@ async function handleRecognition(nim, expression) {
 
         // VALIDATION: Reject if coordinates are 0 or placeholder name
         if (!lat || !lng || Math.abs(lat) < 0.0001) {
-            statusMessage('Gagal mendeteksi lokasi yang valid. Silakan coba lagi.', 'bg-red-100 text-red-700');
-            isDetectionPaused = false;
+            // getPosition() already showed the specific reason when pos is null
+            if (pos) statusMessage('Gagal mendeteksi lokasi yang valid. Silakan coba lagi.', 'bg-red-100 text-red-700');
+            // Short pause so the message is readable and GPS isn't re-queried every frame
+            setTimeout(() => { isDetectionPaused = false; }, 4000);
             return;
         }
         if (lokasi.includes('Mencari lokasi')) {
@@ -1381,41 +1452,48 @@ function renderLandmarkCanvas(canvasEl, landmarkData, opts = {}) {
 }
 
 function getPosition() {
-    return new Promise((resolve) => {
-        if (!navigator.geolocation) return resolve(null);
-        // Stricter options to enforce real-time, high-accuracy GPS
-        const options = { 
-            timeout: 20000, 
-            enableHighAccuracy: true,
-            maximumAge: 0 // Force device to get fresh coordinates, no cache
-        };
-        
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const accuracy = pos.coords.accuracy;
-                // Reject extremely low accuracy (> 2000m)
-                if (accuracy > 2000) {
-                    console.warn(`Location discarded due to terrible accuracy: ${accuracy}m`);
-                    statusMessage('Akurasi lokasi buruk. Mohon cari area terbuka.', 'bg-yellow-100 text-yellow-700');
-                    resolve(null);
-                    return;
-                }
-                // Warn about fake GPS (suspiciously perfect accuracy)
-                if (accuracy < 1) {
-                    console.warn(`WARNING: Suspiciously perfect accuracy (${accuracy}m) - possible fake GPS`);
-                    statusMessage('GPS accuracy mencurigakan. Pastikan tidak menggunakan Fake GPS.', 'bg-red-100 text-red-700');
-                    // Still send to server for validation (server will reject it)
-                }
-                console.log(`GPS Accuracy: ${accuracy}m`);
-                resolve(pos);
-            }, 
-            (err) => {
-                console.warn('Geolocation error:', err);
-                resolve(null);
-            }, 
-            options
-        );
-    });
+    if (!navigator.geolocation) {
+        statusMessage('Browser tidak mendukung lokasi. Gunakan Chrome/Safari versi terbaru.', 'bg-red-100 text-red-700');
+        return Promise.resolve(null);
+    }
+    const request = (options) => new Promise((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, options));
+
+    // High accuracy first; laptops (no GPS chip) and phones indoors often time out
+    // or report POSITION_UNAVAILABLE, so retry once with network-based location.
+    return request({ enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 })
+        .catch((err) => {
+            if (err.code === 1) throw err; // PERMISSION_DENIED: retrying won't help
+            console.warn('High-accuracy location failed, retrying with network location:', err);
+            return request({ enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+        })
+        .then((pos) => {
+            const accuracy = pos.coords.accuracy;
+            // Reject extremely low accuracy (> 2000m)
+            if (accuracy > 2000) {
+                console.warn(`Location discarded due to terrible accuracy: ${accuracy}m`);
+                statusMessage(`Akurasi lokasi buruk (${Math.round(accuracy)} m). Aktifkan GPS/Wi-Fi atau pindah ke area terbuka.`, 'bg-yellow-100 text-yellow-700');
+                return null;
+            }
+            // Warn about fake GPS (suspiciously perfect accuracy)
+            if (accuracy < 1) {
+                console.warn(`WARNING: Suspiciously perfect accuracy (${accuracy}m) - possible fake GPS`);
+                statusMessage('GPS accuracy mencurigakan. Pastikan tidak menggunakan Fake GPS.', 'bg-red-100 text-red-700');
+                // Still send to server for validation (server will reject it)
+            }
+            console.log(`GPS Accuracy: ${accuracy}m`);
+            return pos;
+        })
+        .catch((err) => {
+            console.warn('Geolocation error:', err);
+            const reasons = {
+                1: 'Izin lokasi ditolak. Izinkan lokasi untuk situs ini di pengaturan browser.',
+                2: 'Lokasi tidak tersedia. Aktifkan layanan lokasi di perangkat (Windows: Settings > Privacy > Location; Android: GPS).',
+                3: 'Waktu mencari lokasi habis. Aktifkan GPS/Wi-Fi lalu coba lagi.'
+            };
+            statusMessage(reasons[err.code] || 'Gagal mendapatkan lokasi.', 'bg-red-100 text-red-700');
+            return null;
+        });
 }
 
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -1968,7 +2046,7 @@ async function loadLabeledFaceDescriptorsBackground(membersToProcess) {
             
             // Re-build matcher incrementally
             if (labeledFaceDescriptors.length > 0) {
-                faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.5);
+                faceMatcher = buildFaceMatcher();
             }
             
             await new Promise(r => setTimeout(r, 100)); // Minimal delay to keep UI smooth
